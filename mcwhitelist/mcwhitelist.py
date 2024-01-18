@@ -26,9 +26,14 @@ class McWhitelist(commands.Cog):
             await self.config.guild(interaction.guild).host.set(host)
             await self.config.guild(interaction.guild).port.set(port)
             await self.config.guild(interaction.guild).password.set(password)
-            await interaction.response.send_message(f"Es wurden folgende Werte gesetzt:\nHost: {host}\nPort: {port}\nPasswort: {password}", ephemeral=True)
+            embed = discord.Embed(title="Erfolgreich", description="Es wurden folgende Werte ersetzt:", color=0x24fc03)
+            embed.add_field(name="Host", value=f"{host}", inline=False)
+            embed.add_field(name="Port", value=f"{port}", inline=False)
+            embed.add_field(name="Passwort", value=f"{password}", inline=False)
+            await interaction.response.send_message(embed=embed)
+            #await interaction.response.send_message(f"Es wurden folgende Werte gesetzt:\nHost: {host}\nPort: {port}\nPasswort: {password}", ephemeral=True)
         except Exception as error:
-            interaction.response.send_message(f"Fehler: {error}", ephemeral=True)
+            await interaction.response.send_message(f"Fehler: {error}", ephemeral=True)
 
     @whitelist.command(name="add", description="Setze dich auf die Whitelist unseres Minecraft Servers")
     @app_commands.describe(username="Dein Minecraft Username")
