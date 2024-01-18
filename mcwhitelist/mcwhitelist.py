@@ -27,13 +27,14 @@ class McWhitelist(commands.Cog):
             await self.config.guild(interaction.guild).port.set(port)
             await self.config.guild(interaction.guild).password.set(password)
             embed = discord.Embed(title="Erfolgreich", description="Es wurden folgende Werte ersetzt:", color=0x24fc03)
-            embed.add_field(name="Host", value=f"{host}", inline=False)
-            embed.add_field(name="Port", value=f"{port}", inline=False)
-            embed.add_field(name="Passwort", value=f"{password}", inline=False)
+            embed.add_field(name="Host", value=f"{host}", inline=True)
+            embed.add_field(name="Port", value=f"{port}", inline=True)
+            embed.add_field(name="Passwort", value=f"{password}", inline=True)
             await interaction.response.send_message(embed=embed, ephemeral=True)
             #await interaction.response.send_message(f"Es wurden folgende Werte gesetzt:\nHost: {host}\nPort: {port}\nPasswort: {password}", ephemeral=True)
         except Exception as error:
-            await interaction.response.send_message(f"Fehler: {error}", ephemeral=True)
+            embed = discord.Embed(description=f"Fehler: {error}", color=0xff0000)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @whitelist.command(name="add", description="Setze dich auf die Whitelist unseres Minecraft Servers")
     @app_commands.describe(username="Dein Minecraft Username")
@@ -42,7 +43,7 @@ class McWhitelist(commands.Cog):
             host = await self.config.guild(interaction.guild).host()
             port = await self.config.guild(interaction.guild).port()
             password = await self.config.guild(interaction.guild).password()
-            existing = await self.config.guild(interaction.guild).mcuser.get_raw(interaction.user.id, 'username')
+            existing = await self.config.guild(interaction.guild).mcuser.get_raw(interaction.user.id, 'mcusername')
             with MCRcon(host, password, port) as mcr:
                 resp = mcr.command(f"/whitelist remove {existing}")
             removedExisting = 1
@@ -51,17 +52,17 @@ class McWhitelist(commands.Cog):
         finally:
             try:
                 with MCRcon(host, password, port) as mcr:
-                    resp = mcr.command(f"/whitelist add {username}")
-                await self.config.guild(interaction.guild).mcuser.set_raw(
-                    interaction.user.id, value={'discordusername': interaction.user.name, 'displayname': interaction.user.display_name, 'mcusername': username}
-                )
-                #test = await self.config.guild(interaction.guild).mcuser.get_raw(interaction.user.id, 'username')
+                    resp = mcr.command(f"/whitelist add {username.lower()}")
+                await self.config.guild(interaction.guild).mcuser.set_raw(interaction.user.id, value={'discordusername': interaction.user.name, 'displayname': interaction.user.display_name, 'mcusername': username.lower()})
                 if removedExisting == 0:
-                    await interaction.response.send_message(f"Du hast {username} zur Whitelist hinzugefügt", ephemeral=True)
+                    embed = discord.Embed(description=f"Du hast {username} zur Whitelist hinzugefügt", color=0x24fc03)
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
                 elif removedExisting == 1:
-                    await interaction.response.send_message(f"Dein Username wurde von {existing} zu {username} auf der Whitelist geändert", ephemeral=True)
+                    embed = discord.Embed(description=f"Dein Username wurde von {existing} zu {username} auf der Whitelist geändert", color=0x24fc03)
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
             except Exception as error:
-                await interaction.response.send_message(f"Fehler beim hinzufügen zur Whitelist \n {error}", ephemeral=True)
+                embed = discord.Embed(description=f"Fehler beim hinzufügen zur Whitelist\n{error}", color=0xff0000)
+                await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @whitelist.command(name="remove", description="Entferne dich von der Whitelist unseres Minecraft Servers")
     async def remove(self, interaction: discord.Interaction):
@@ -74,18 +75,26 @@ class McWhitelist(commands.Cog):
                 resp = mcr.command(f"/whitelist remove {username}")
             #test = await self.config.guild(interaction.guild).mcuser()
             await self.config.guild(interaction.guild).mcuser.clear_raw(interaction.user.id)
-            await interaction.response.send_message(f"{username} wurde von der Whitelist entfernt", ephemeral=True)
+            embed = discord.Embed(description=f"{username} wurde von der Whitelist entfernt", color=0x24fc03)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
-            await interaction.response.send_message(f"Du warst nicht auf der Whitelist hinterlegt {error}", ephemeral=True)
+            embed = discord.Embed(description=f"Du warst nicht auf der Whitelist hinterlegt", color=0xff0000)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @whitelist.command(description="Zeige sämtliche hinterlegten User")
+    @whitelist.command(name="showuser", description="Zeige sämtliche hinterlegten User")
     @app_commands.checks.has_permissions(administrator=True)
     async def showuser(self, interaction: discord.Interaction):
         try:
             user = await self.config.guild(interaction.guild).mcuser()
-            await interaction.response.send_message(user, ephemeral=True)
+            embed = discord.Embed(title="Registrierte User", color=0x24fc03)
+            for userID in user:
+                dname = await self.config.guild(interaction.guild).mcuser.get_raw(userID, 'displayname')
+                mcname = await self.config.guild(interaction.guild).mcuser.get_raw(userID, 'mcusername')
+                embed.add_field(name=f"{dname}", value=f"{mcname}", inline=True)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
-            await interaction.response.send_message(f"Fehler: {error}", ephemeral=True)
+            embed = discord.Embed(description=f"Fehler: {error}", color=0xff0000)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
