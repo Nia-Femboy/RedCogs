@@ -30,7 +30,7 @@ class McWhitelist(commands.Cog):
             embed.add_field(name="Host", value=f"{host}", inline=False)
             embed.add_field(name="Port", value=f"{port}", inline=False)
             embed.add_field(name="Passwort", value=f"{password}", inline=False)
-            await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             #await interaction.response.send_message(f"Es wurden folgende Werte gesetzt:\nHost: {host}\nPort: {port}\nPasswort: {password}", ephemeral=True)
         except Exception as error:
             await interaction.response.send_message(f"Fehler: {error}", ephemeral=True)
