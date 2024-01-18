@@ -1,0 +1,9 @@
+{
+    "author": ["Nia"],
+    "install_msg": "MCWhitelist wurde erfolgreich installiert",
+    "name": "MCWhitelist",
+    "short": "Mit diesem Cog ist es möglich das sich User selbst auf eine Whitelist setzten",
+    "description": "Es ist möglich dass sich die User selbst auf eine Whitelist setzten oder entfernen allerdings nur 1 Name pro User und beim leaven des Servers wird der dazugehörige Username automatisch von der Whitelist entfernt",
+    "tags": ["rcon", "minecraft", "auto"],
+    "requirements": ["discord","mcrcon"]
+}
