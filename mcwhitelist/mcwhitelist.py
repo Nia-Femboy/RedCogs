@@ -1,3 +1,4 @@
+from typing import Optional
 import discord
 
 from redbot.core import commands, app_commands, Config
@@ -52,8 +53,8 @@ class McWhitelist(commands.Cog):
         finally:
             try:
                 with MCRcon(host, password, port) as mcr:
-                    resp = mcr.command(f"/whitelist add {username.lower()}")
-                await self.config.guild(interaction.guild).mcuser.set_raw(interaction.user.id, value={'discordusername': interaction.user.name, 'displayname': interaction.user.display_name, 'mcusername': username.lower()})
+                    resp = mcr.command(f"/whitelist add {username}")
+                await self.config.guild(interaction.guild).mcuser.set_raw(interaction.user.id, value={'discordusername': interaction.user.name, 'displayname': interaction.user.display_name, 'mcusername': username})
                 if removedExisting == 0:
                     embed = discord.Embed(description=f"Du hast {username} zur Whitelist hinzugefügt", color=0x24fc03)
                     await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -93,7 +94,37 @@ class McWhitelist(commands.Cog):
                 embed.add_field(name=f"{dname}", value=f"{mcname}", inline=True)
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
-            embed = discord.Embed(description=f"Fehler: {error}", color=0xff0000)
+            embed = discord.Embed(title="Fehler", description=f"{error}", color=0xff0000)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @whitelist.command(name="edituser", description="Editiere aktuelle User")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def edituser(self, interaction: discord.Interaction):
+        try:
+            user = await self.config.guild(interaction.guild).mcuser()
+            i = -1
+            userCount = 0
+            mcUserID = []
+            for userID in user:
+                mcUserID.append(userID)
+                i += 1
+            displayname = await self.config.guild(interaction.guild).mcuser.get_raw(mcUserID[userCount], 'displayname')
+            mcusername = await self.config.guild(interaction.guild).mcuser.get_raw(mcUserID[userCount], 'mcusername')
+            embed = discord.Embed(title=f"User {userCount + 1}/{i + 1}", color=0x0ffc03)
+            embed.add_field(name=f"{displayname}", value=f"{mcusername}")
+            embed2 = discord.Embed(title=f"User Test", color=0x0ffc03)
+            view = Menu(embed2)
+            #view = discord.ui.View()
+            #view.add_item(
+            #    discord.ui.Button(
+            #        style=discord.ButtonStyle.green,
+            #        label="Test",
+            #        disabled=False
+            #        )
+            #)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        except Exception as error:
+            embed = discord.Embed(title="Fehler", description=f"{error}", color=0xff0000)
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @commands.Cog.listener()
@@ -108,4 +139,34 @@ class McWhitelist(commands.Cog):
             await self.config.guild(member.guild).mcuser.clear_raw(member.id)
             removedUser = 1
         except Exception as error:
-            test = 0
+            print(f"Fehler: {error}")
+
+class Menu(discord.ui.View):
+
+    def __init__(self, embed: discord.Embed):
+        super().__init__()
+        self.embed = embed
+
+    @discord.ui.button(label="<=", style=discord.ButtonStyle.grey)
+    async def back(self, interaction: discord.Interaction, button: discord.ui.Button):
+        #embed = discord.Embed(title="Test", description="asd", color=0x0ffc03)
+        await interaction.response.defer()
+        await interaction.edit_original_response(embed=self.embed)
+
+    @discord.ui.button(label="Edit", style=discord.ButtonStyle.secondary)
+    async def edit(self, interaction: discord.Interaction, button: discord.ui.Button):
+        a = 0
+
+    @discord.ui.button(label="X", style=discord.ButtonStyle.danger)
+    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        #await interaction.edit_original_response(view=None)
+        await interaction.delete_original_response()
+
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.danger)
+    async def delete(self, interaction: discord.Interaction, button: discord.ui.Button):
+        a = 0
+
+    @discord.ui.button(label="=>", style=discord.ButtonStyle.grey)
+    async def forward(self, interaction: discord.Interaction, button: discord.ui.Button):
+        a = 0
