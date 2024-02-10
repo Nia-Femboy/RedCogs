@@ -1,0 +1,18 @@
+{
+    "author": [
+        "Nia"
+    ],
+    "install_msg": "Modsystem wurde erfolgreich installiert",
+    "name": "Modsystem",
+    "short": "Mit diesem Cog ist es möglich User zu verwarnen, warns, kicks und bans zu loggen oder anhand der Verwarnungen automatische Schritte einzuleiten",
+    "description": "User können verwant werden und anhand der Verwarnungen, können automatisch weitere Schritte eingeleitet werden, außerdem können warns, kicks und bans in einem Logchannel geloggt werden, entweder alles in einem Channel oder alles in einem eigenen Channel",
+    "tags": [
+        "rcon",
+        "minecraft",
+        "auto"
+    ],
+    "requirements": [
+        "discord",
+        "mcrcon"
+    ]
+}
