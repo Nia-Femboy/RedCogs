@@ -103,12 +103,12 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
-    @modsystem.command(name="usemultiplelogchannel", description="Nutze mehrere Logchannel")
-    @app_commands.describe(multiplelogchannel="Sollen mehrere Channel genutzt werden?")
+    @modsystem.command(name="usegenerallogchannel", description="Nutze einen generellen Logchannel")
+    @app_commands.describe(multiplelogchannel="Solle ein genereller Channel genutzt werden?")
     @app_commands.checks.has_permissions(administrator=True)
-    async def usemultiplelogchannel(self, interaction: discord.Interaction, multiplelogchannel: bool):
+    async def usegenerallogchannel(self, interaction: discord.Interaction, multiplelogchannel: bool):
         try:
-            if(await self.config.guild(interaction.guild).generalLogChannel() is None):
+            if(await self.config.guild(interaction.guild).generalLogChannel() is None and multiplelogchannel == True):
                 raise Exception("Kein gültiger Channel definiert")
             await self.config.guild(interaction.guild).useGeneralLogChannel.set(multiplelogchannel)
             embedSuccess.add_field(name="Nutze General Log Channel", value=multiplelogchannel, inline=True)
@@ -123,7 +123,7 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def enablebanlog(self, interaction: discord.Interaction, activate: bool):
         try:
-            if(await self.config.guild(interaction.guild).banlogchannel() is None):
+            if(await self.config.guild(interaction.guild).banlogchannel() is None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
                 raise Exception("Kein gültiger Channel definiert")
             await self.config.guild(interaction.guild).enableBanLog.set(activate)
             embedSuccess.add_field(name="Ban Log", value=activate)
@@ -138,7 +138,7 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def enablekicklog(self, interaction: discord.Interaction, activate: bool):
         try:
-            if(await self.config.guild(interaction.guild).kickLogChannel() is None):
+            if(await self.config.guild(interaction.guild).kickLogChannel() is None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
                 raise Exception("Kein gültiger Channel definiert")
             await self.config.guild(interaction.guild).enableKickLog.set(activate)
             embedSuccess.add_field(name="Kick Log", value=activate)
@@ -153,7 +153,7 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def enableupdatelog(self, interaction: discord.Interaction, activate: bool):
         try:
-            if(await self.config.guild(interaction.guild).updateLogChannel() is None):
+            if(await self.config.guild(interaction.guild).updateLogChannel() is None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
                 raise Exception("Kein gültiger Channel definiert")
             await self.config.guild(interaction.guild).enableUpdateLog.set(activate)
             embedSuccess.add_field(name="Client-Update Log", value=activate)
@@ -168,22 +168,30 @@ class Modsystem(commands.Cog):
         try:
             #channel = entry.guild.get_channel(1186750967476142111)
             if(entry.action == discord.AuditLogAction.kick and await self.config.guild(entry.guild).enableKickLog() == 1):
-                channel = entry.guild.get_channel(await self.config.guild(entry.guild).kickLogChannel())
+                if(await self.config.guild(entry.guild).useGeneralLogChannel() == True):
+                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
+                else:
+                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).kickLogChannel())
                 if(entry.reason is not None):
                     embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " mit der Begründung **" + entry.reason + "** gekickt"
                 else:
                     embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " gekickt"
                 await channel.send(embed=embedLog)
             elif(entry.action == discord.AuditLogAction.ban and await self.config.guild(entry.guild).enableBanLog() == 1):
-                channel = entry.guild.get_channel(await self.config.guild(entry.guild).banLogChannel())
+                if(await self.config.guild(entry.guild).useGeneralLogChannel() == True):
+                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
+                else:
+                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).banLogChannel())
                 if(entry.reason is not None):
                     embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " mit der Begründung **" + entry.reason + "** gebant"
                 else:
                     embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " gebant"
                 await channel.send(embed=embedLog)
             elif(entry.action == discord.AuditLogAction.member_update and await self.config.guild(entry.guild).enableUpdateLog() == 1):
-                channel = entry.guild.get_channel(await self.config.guild(entry.guild).updateLogChannel())
-                print(await self.config.guild(entry.guild).useGeneralLogChannel())
+                if(await self.config.guild(entry.guild).useGeneralLogChannel() == True):
+                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
+                else:
+                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).updateLogChannel())
                 if(entry.after.timed_out_until is not None):
                     timeout_time = str(timedelta(seconds=round((entry.after.timed_out_until - datetime.now(entry.after.timed_out_until.tzinfo)).total_seconds())))
                     if(entry.reason is not None):
