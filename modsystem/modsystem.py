@@ -45,7 +45,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setwarninglogchannel", description="Setze den Logchannel für warning")
@@ -60,7 +60,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setkicklogchannel", description="Sete den Logchannel für kicks")
@@ -75,7 +75,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setbanlogchannel", description="Setzte den Logchannel für bans")
@@ -90,7 +90,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setupdatelogchannel", description="Setze den Logchanneö für Client-Updates")
@@ -105,7 +105,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setjoinlogchannel", description="Setze den Logchannel für Joins")
@@ -120,7 +120,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es idt folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setmessagedeletelogchannel", description="Setze den Logchannel für Delete-Messages")
@@ -135,7 +135,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="usegenerallogchannel", description="Nutze einen generellen Logchannel")
@@ -152,7 +152,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enablebanlog", description="Aktiviere oder deaktiviere das Loggen der Bans")
@@ -176,7 +176,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enablekicklog", description="Aktiviere oder deaktiviere das Loggen der Kicks")
@@ -200,7 +200,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enableupdatelog", description="Aktiviere oder deaktiviere das Loggen der Client-Updates")
@@ -224,7 +224,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enablejoinlog", description="Aktiviere oder deaktiviere das Loggen neuer User beim Joinen")
@@ -251,7 +251,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist ein Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enabledeletemessagelog", description="Aktiviere oder deaktiviere das Loggen gelöschter Nachrichten")
@@ -275,7 +275,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist ein Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="getconfig", description="Schau dir die aktuelle Config an")
@@ -285,15 +285,13 @@ class Modsystem(commands.Cog):
             embed = discord.Embed(title="Config", color=0x0ffc03)
             embed.description=f"**Channel:**\nGneral Log-Channel: <#{await self.config.guild(interaction.guild).generalLogChannel()}>\nWarn Log-Channel: <#{await self.config.guild(interaction.guild).warnLogChannel()}>\nKick Log-Channel: <#{await self.config.guild(interaction.guild).kickLogChannel()}>\nBan Log-Channel: <#{await self.config.guild(interaction.guild).banLogChannel()}>\nUpdate Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\nJoin Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\nDelete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n\n**Status:**\nBWarn-Log: **{await self.config.guild(interaction.guild).enableWarnLog()}**\nKick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\nBan-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\nUpdate-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\nJoin-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\nDelete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n\n**General:**\nNutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGenerelLogChannel()}**"
             await interaction.response.send_message(embed=embed)
-            print(invites)
         except Exception as error:
-            embedFailure.description=f"Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            embedFailure.description=f"Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry):
         try:
-            #channel = entry.guild.get_channel(1186750967476142111)
             if(entry.action == discord.AuditLogAction.kick and await self.config.guild(entry.guild).enableKickLog() == 1):
                 if(await self.config.guild(entry.guild).useGeneralLogChannel() == True):
                     channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
@@ -357,11 +355,11 @@ class Modsystem(commands.Cog):
                 for invite in invites[member.guild.id]:
                     result = await Modsystem.get_invite_code(invites_after, invite.code)
                     if(invite.uses < result.uses):
-                        usedInvite = invite
+                        usedInvite = result
                         break
                 await Modsystem.set_new_invites(invites_after, member.guild)
                 embedLog.set_author(name=member.display_name, icon_url=member.display_avatar)
-                embedLog.description=f"{member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** welcher von {usedInvite.inviter.mention} erstellt wurde eingeladen worden\n\nInformationen zu dem Link:\nBenutzungen: **{usedInvite.uses}**\nChannel: {usedInvite.channel.mention}\nGeblieben: **{usedInvite.approximate_member_count}**\nLäuft ab am: **{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\nLink: **[{usedInvite.url}]({usedInvite.url})**"
+                embedLog.description=f"{member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** welcher von {usedInvite.inviter.mention} erstellt wurde eingeladen worden\n\nInformationen zu dem Link:\nBenutzungen: **{usedInvite.uses}**\nChannel: {usedInvite.channel.mention}\nGeblieben: **{usedInvite.approximate_member_count}**\nLäuft ab am: **{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\nLink: **[Join]({usedInvite.url})**"
                 await channel.send(embed=embedLog)
                 embedLog.remove_author()
         except Exception as error:
