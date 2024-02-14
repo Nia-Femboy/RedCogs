@@ -28,6 +28,7 @@ class Modsystem(commands.Cog):
             enableJoinLog=False,
             deleteMessageLogChannel=0,
             enableDeleteMessageLog=False,
+            enableVoiceLog=False,
             users={}
         )
 
@@ -278,6 +279,18 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
+    @modsystem.command(name="enablevoicelog", description="Aktiviere oder deaktiviere das Loggen von Clients die den Voicechannel verlassen haben")
+    @app_commands.describe(activate="Aktivieren oder deaktivieren")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def enablevoicelog(self, interaction: discord.Interaction, activate: bool):
+        try:
+            await self.config.guild(interaction.guild).enableVoiceLog.set(activate)
+            embedSuccess.add_field(name="Voice Log", value=activate)
+            await interaction.response.send_message(embed=embedSuccess)
+        except Exception as error:
+            embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}**"
+            await interaction.response.send_message(embed=embedFailure)
+
     @modsystem.command(name="getconfig", description="Schau dir die aktuelle Config an")
     @app_commands.checks.has_permissions(administrator=True)
     async def showconfig(self, interaction: discord.Interaction):
@@ -408,5 +421,14 @@ class Modsystem(commands.Cog):
         try:
             global invites
             invites[invite.guild.id] = await invite.guild.invites()
+        except Exception as error:
+            print(error)
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        try:
+            if(await self.config.guild(member.guild).enableVoiceLog()):
+                if(before.channel is not None and after.channel is None):
+                    await before.channel.send(f"**{member.display_name}** hat den Channel verlassen")
         except Exception as error:
             print(error)
