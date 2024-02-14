@@ -23,7 +23,7 @@ class Modsystem(commands.Cog):
             enableBanLog=False,
             updateLogChannel=0,
             enableUpdateLog=False,
-            useGeneralLogChannel=True,
+            useGenerelLogChannel=True,
             joinLogChannel=0,
             enableJoinLog=False,
             deleteMessageLogChannel=0,
@@ -232,10 +232,10 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def enablejoinlog(self, interaction: discord.Interaction, activate: bool):
         try:
+            global invites
             if(activate):
                 if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
                     await self.config.guild(interaction.guild).enableJoinLog.set(activate)
-                    global invites
                     invites[interaction.guild.id] = await interaction.guild.invites()
                     embedSuccess.add_field(name="Join Log", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
@@ -246,7 +246,6 @@ class Modsystem(commands.Cog):
                     raise Exception("Kein Gültiger Channel angegeben")
             else:
                 await self.config.guild(interaction.guild).enableJoinLog.set(activate)
-                global invites
                 invites[interaction.guild.id] = await interaction.guild.invites()
                 embedSuccess.add_field(name="Join Log", value=activate)
                 await interaction.response.send_message(embed=embedSuccess)
@@ -284,7 +283,7 @@ class Modsystem(commands.Cog):
     async def showconfig(self, interaction: discord.Interaction):
         try:
             embed = discord.Embed(title="Config", color=0x0ffc03)
-            embed.description=f"**Channel:**\nGneral Log-Channel: <#{await self.config.guild(interaction.guild).generalLogChannel()}>\nWarn Log-Channel: <#{await self.config.guild(interaction.guild).warnLogChannel()}>\nKick Log-Channel: <#{await self.config.guild(interaction.guild).kickLogChannel()}>\nBan Log-Channel: <#{await self.config.guild(interaction.guild).banLogChannel()}>\nUpdate Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\nJoin Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\nDelete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n\n**Status:**\nBWarn-Log: **{await self.config.guild(interaction.guild).enableWarnLog()}**\nKick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\nBan-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\nUpdate-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\nJoin-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\nDelete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n\n**General:**\nNutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**"
+            embed.description=f"**Channel:**\nGneral Log-Channel: <#{await self.config.guild(interaction.guild).generalLogChannel()}>\nWarn Log-Channel: <#{await self.config.guild(interaction.guild).warnLogChannel()}>\nKick Log-Channel: <#{await self.config.guild(interaction.guild).kickLogChannel()}>\nBan Log-Channel: <#{await self.config.guild(interaction.guild).banLogChannel()}>\nUpdate Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\nJoin Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\nDelete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n\n**Status:**\nBWarn-Log: **{await self.config.guild(interaction.guild).enableWarnLog()}**\nKick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\nBan-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\nUpdate-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\nJoin-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\nDelete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n\n**General:**\nNutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGenerelLogChannel()}**"
             await interaction.response.send_message(embed=embed)
         except Exception as error:
             embedFailure.description=f"Es ist folgender Fehler aufgetreten:**\n\n{error}"
