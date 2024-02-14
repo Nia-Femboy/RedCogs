@@ -360,7 +360,13 @@ class Modsystem(commands.Cog):
                         break
                 await Modsystem.set_new_invites(invites_after, member.guild)
                 embedLog.set_author(name=member.display_name, icon_url=member.display_avatar)
-                embedLog.description=f"{member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** welcher von {usedInvite.inviter.mention} erstellt wurde eingeladen worden\n\nInformationen zu dem Link:\nBenutzungen: **{usedInvite.uses}**\nChannel: {usedInvite.channel.mention}\nGeblieben: **{usedInvite.approximate_member_count}**\nLäuft ab am: **{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\nLink: **[Join]({usedInvite.url})**"
+                embedString=f"{member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** welcher von {usedInvite.inviter.mention} erstellt wurde eingeladen worden\n\nInformationen zu dem Link:\nBenutzungen: **{usedInvite.uses}**\nChannel: {usedInvite.channel.mention}\nGeblieben: **{usedInvite.approximate_member_count}**\nLäuft ab am: "
+                if(usedInvite.expires_at is None):
+                    embedString += "**Niemals**\n"
+                else:
+                    embedString += f"Läuft ab am: **{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\n"
+                embedString += f"Link: **[Join]({usedInvite.url})**"
+                embedLog.description=embedString
                 await channel.send(embed=embedLog)
                 embedLog.remove_author()
         except Exception as error:
@@ -389,9 +395,9 @@ class Modsystem(commands.Cog):
                 embedString=f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n{data.cached_message.content}\n\nGeschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\nGelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
                 if(data.cached_message.pinned is not None):
                     if(data.cached_message.pinned):
-                        embedString = embedString + "War die Nachricht gepinnt: **Ja**"
+                        embedString += "War die Nachricht gepinnt: **Ja**"
                     else:
-                        embedString = embedString + "War die Nachricht gepinnt: **Nein**"
+                        embedString += "War die Nachricht gepinnt: **Nein**"
                 embedLog.description=embedString
                 await channel.send(embed=embedLog)
         except Exception as error:
