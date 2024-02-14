@@ -161,7 +161,12 @@ class Modsystem(commands.Cog):
     async def enablebanlog(self, interaction: discord.Interaction, activate: bool):
         try:
             if(activate):
-                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                    await self.config.guild(interaction.guild).enableBanLog.set(activate)
+                    embedSuccess.add_field(name="Ban Log", value=activate)
+                    await interaction.response.send_message(embed=embedSuccess)
+                    embedSuccess.clear_fields()
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
                     raise Exception("Kein gültiger genereller Channel definiert")
                 elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).banLogChannel())) is None):
                     raise Exception("Kein Gültiger Channel angegeben")
@@ -180,7 +185,12 @@ class Modsystem(commands.Cog):
     async def enablekicklog(self, interaction: discord.Interaction, activate: bool):
         try:
             if(activate):
-                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                    await self.config.guild(interaction.guild).enableKickLog.set(activate)
+                    embedSuccess.add_field(name="Kick Log", value=activate)
+                    await interaction.response.send_message(embed=embedSuccess)
+                    embedSuccess.clear_fields()
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
                     raise Exception("Kein gültiger genereller Channel definiert")
                 elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).kickLogChannel())) is None):
                     raise Exception("Kein Gültiger Channel angegeben")
@@ -199,7 +209,12 @@ class Modsystem(commands.Cog):
     async def enableupdatelog(self, interaction: discord.Interaction, activate: bool):
         try:
             if(activate):
-                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                    await self.config.guild(interaction.guild).enableUpdateLog.set(activate)
+                    embedSuccess.add_field(name="Client-Update Log", value=activate)
+                    await interaction.response.send_message(embed=embedSuccess)
+                    embedSuccess.clear_fields()
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
                     raise Exception("Kein gültiger genereller Channel definiert")
                 elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).updateLogChannel())) is None):
                     raise Exception("Kein Gültiger Channel angegeben")
@@ -218,7 +233,14 @@ class Modsystem(commands.Cog):
     async def enablejoinlog(self, interaction: discord.Interaction, activate: bool):
         try:
             if(activate):
-                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                    await self.config.guild(interaction.guild).enableJoinLog.set(activate)
+                    global invites
+                    invites[interaction.guild.id] = await interaction.guild.invites()
+                    embedSuccess.add_field(name="Join Log", value=activate)
+                    await interaction.response.send_message(embed=embedSuccess)
+                    embedSuccess.clear_fields()
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
                     raise Exception("Kein gültiger genereller Channel definiert")
                 elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).enableJoinLog())) is None):
                     raise Exception("Kein Gültiger Channel angegeben")
@@ -239,8 +261,13 @@ class Modsystem(commands.Cog):
     async def enabledeletemessagelog(self, interaction: discord.Interaction, activate: bool):
         try:
             if(activate):
-                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
-                    raise Exception("Kein gültiger genereller Channel definiert")
+                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                    await self.config.guild(interaction.guild).enableDeleteMessageLog.set(activate)
+                    embedSuccess.add_field(name="DeleteMessageLog", value=activate)
+                    await interaction.response.send_message(embed=embedSuccess)
+                    embedSuccess.clear_fields()
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGeneralLogChannel()):
+                    raise Exception("Kein Gültiger genereller Channel definiert")
                 elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).deleteMessageLogChannel())) is None):
                     raise Exception("Kein Gültiger Channel angegeben")
             else:
