@@ -1,7 +1,7 @@
 import discord
 
 from redbot.core import commands, app_commands, Config
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 embedSuccess = discord.Embed(title="Erfolgreich", description="Es wurden folgende Werte gesetzt:", color=0x0ffc03)
 embedFailure = discord.Embed(title="Fehler", color=0xff0000)
@@ -26,7 +26,7 @@ class Modsystem(commands.Cog):
             useGeneralLogChannel=True,
             joinLogChannel=0,
             enableJoinLog=False,
-            messageDeleteLogChannel=0,
+            deleteMessageLogChannel=0,
             enableDeleteMessageLog=False,
             users={}
         )
@@ -108,17 +108,49 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
+    @modsystem.command(name="setjoinlogchannel", description="Setze den Logchannel für Joins")
+    @app_commands.describe(channelid="Die ChannelID des Join Logchannel")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def setjoinlogchannel(self, interaction: discord.Interaction, channelid: str):
+        try:
+            if(interaction.guild.get_channel(int(channelid)) is None):
+                raise Exception("Channel existiert nicht")
+            await self.config.guild(interaction.guild).joinLogChannel.set(int(channelid))
+            embedSuccess.add_field(name="Join Log Channel", value=channelid)
+            await interaction.response.send_message(embed=embedSuccess)
+            embedSuccess.clear_fields()
+        except Exception as error:
+            embedFailure.description=f"**Es idt folgender Fehler aufgetreten:**\n\n{error}"
+            interaction.response.send_message(embed=embedFailure)
+
+    @modsystem.command(name="setmessagedeletelogchannel", description="Setze den Logchannel für Delete-Messages")
+    @app_commands.describe(channelid="Die ChannelID des Delete Message Logchannel")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def setmessagedeletelogchannel(self, interaction: discord.Interaction, channelid: str):
+        try:
+            if(interaction.guild.get_channel(int(channelid)) is None):
+                raise Exception("Channel existiert nicht")
+            await self.config.guild(interaction.guild).deleteMessageLogChannel.set(int(channelid))
+            embedSuccess.add_field(name="Delete Message Log Channel", value=channelid)
+            await interaction.response.send_message(embed=embedSuccess)
+            embedSuccess.clear_fields()
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            interaction.response.send_message(embed=embedFailure)
+
     @modsystem.command(name="usegenerallogchannel", description="Nutze einen generellen Logchannel")
-    @app_commands.describe(multiplelogchannel="Solle ein genereller Channel genutzt werden?")
+    @app_commands.describe(multiplelogchannel="Soll ein genereller Channel genutzt werden?")
     @app_commands.checks.has_permissions(administrator=True)
     async def usegenerallogchannel(self, interaction: discord.Interaction, multiplelogchannel: bool):
         try:
-            if(await self.config.guild(interaction.guild).generalLogChannel() is None and multiplelogchannel == True):
-                raise Exception("Kein gültiger Channel definiert")
-            await self.config.guild(interaction.guild).useGeneralLogChannel.set(multiplelogchannel)
-            embedSuccess.add_field(name="Nutze General Log Channel", value=multiplelogchannel, inline=True)
-            await interaction.response.send_message(embed=embedSuccess)
-            embedSuccess.clear_fields()
+            if(multiplelogchannel):
+                if(await self.config.guild(interaction.guild).generalLogChannel() is None):
+                    raise Exception("Kein gültiger Channel definiert")
+            else:
+                await self.config.guild(interaction.guild).useGeneralLogChannel.set(multiplelogchannel)
+                embedSuccess.add_field(name="Nutze General Log Channel", value=multiplelogchannel, inline=True)
+                await interaction.response.send_message(embed=embedSuccess)
+                embedSuccess.clear_fields()
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
@@ -128,14 +160,16 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def enablebanlog(self, interaction: discord.Interaction, activate: bool):
         try:
-            if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).banlogchannel())) is None):
-                raise Exception("Kein gültiger Channel definiert")
-            elif(await self.config.guild(interaction.guild).useGenerelLogChannel() == False):
-                raise Exception("Es wird momentan der Generelle Channel genutzt")
-            await self.config.guild(interaction.guild).enableBanLog.set(activate)
-            embedSuccess.add_field(name="Ban Log", value=activate)
-            await interaction.response.send_message(embed=embedSuccess)
-            embedSuccess.clear_fields()
+            if(activate):
+                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                    raise Exception("Kein gültiger genereller Channel definiert")
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).banLogChannel())) is None):
+                    raise Exception("Kein Gültiger Channel angegeben")
+            else:
+                await self.config.guild(interaction.guild).enableBanLog.set(activate)
+                embedSuccess.add_field(name="Ban Log", value=activate)
+                await interaction.response.send_message(embed=embedSuccess)
+                embedSuccess.clear_fields()
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
@@ -145,14 +179,16 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def enablekicklog(self, interaction: discord.Interaction, activate: bool):
         try:
-            if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).kickLogChannel())) is None):
-                raise Exception("Kein gültiger Channel definiert")
-            elif(await self.config.guild(interaction.guild).useGenerelLogChannel() == False):
-                raise Exception("Es wird momentan der Generelle Channel genutzt")
-            await self.config.guild(interaction.guild).enableKickLog.set(activate)
-            embedSuccess.add_field(name="Kick Log", value=activate)
-            await interaction.response.send_message(embed=embedSuccess)
-            embedSuccess.clear_fields()
+            if(activate):
+                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                    raise Exception("Kein gültiger genereller Channel definiert")
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).kickLogChannel())) is None):
+                    raise Exception("Kein Gültiger Channel angegeben")
+            else:
+                await self.config.guild(interaction.guild).enableKickLog.set(activate)
+                embedSuccess.add_field(name="Kick Log", value=activate)
+                await interaction.response.send_message(embed=embedSuccess)
+                embedSuccess.clear_fields()
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
@@ -162,14 +198,16 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def enableupdatelog(self, interaction: discord.Interaction, activate: bool):
         try:
-            if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).updateLogChannel())) is None):
-                raise Exception("Kein gültiger Channel definiert")
-            elif(await self.config.guild(interaction.guild).useGenerelLogChannel() == False):
-                raise Exception("Es wird momentan der Generelle Channel genutzt")
-            await self.config.guild(interaction.guild).enableUpdateLog.set(activate)
-            embedSuccess.add_field(name="Client-Update Log", value=activate)
-            await interaction.response.send_message(embed=embedSuccess)
-            embedSuccess.clear_fields()
+            if(activate):
+                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                    raise Exception("Kein gültiger genereller Channel definiert")
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).updateLogChannel())) is None):
+                    raise Exception("Kein Gültiger Channel angegeben")
+            else:
+                await self.config.guild(interaction.guild).enableUpdateLog.set(activate)
+                embedSuccess.add_field(name="Client-Update Log", value=activate)
+                await interaction.response.send_message(embed=embedSuccess)
+                embedSuccess.clear_fields()
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
@@ -179,18 +217,50 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def enablejoinlog(self, interaction: discord.Interaction, activate: bool):
         try:
-            if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None):
-                raise Exception("Kein gültiger Channel definiert")
-            elif(await self.config.guild(interaction.guild).useGenerelLogChannel() == False):
-                raise Exception("Es wird momentan der Generelle Channel genutzt")
-            await self.config.guild(interaction.guild).enableJoinLog.set(activate)
-            global invites
-            invites[interaction.guild.id] = await interaction.guild.invites()
-            embedSuccess.add_field(name="Join Log", value=activate)
-            await interaction.response.send_message(embed=embedSuccess)
-            embedSuccess.clear_fields()
+            if(activate):
+                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                    raise Exception("Kein gültiger genereller Channel definiert")
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).enableJoinLog())) is None):
+                    raise Exception("Kein Gültiger Channel angegeben")
+            else:
+                await self.config.guild(interaction.guild).enableJoinLog.set(activate)
+                global invites
+                invites[interaction.guild.id] = await interaction.guild.invites()
+                embedSuccess.add_field(name="Join Log", value=activate)
+                await interaction.response.send_message(embed=embedSuccess)
+                embedSuccess.clear_fields()
         except Exception as error:
             embedFailure.description=f"**Es ist ein Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure)
+
+    @modsystem.command(name="enabledeletemessagelog", description="Aktiviere oder deaktiviere das Loggen gelöschter Nachrichten")
+    @app_commands.describe(activate="Aktivieren oder deaktivieren")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def enabledeletemessagelog(self, interaction: discord.Interaction, activate: bool):
+        try:
+            if(activate):
+                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGenerelLogChannel()):
+                    raise Exception("Kein gültiger genereller Channel definiert")
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).deleteMessageLogChannel())) is None):
+                    raise Exception("Kein Gültiger Channel angegeben")
+            else:
+                await self.config.guild(interaction.guild).enableDeleteMessageLog.set(activate)
+                embedSuccess.add_field(name="DeleteMessageLog", value=activate)
+                await interaction.response.send_message(embed=embedSuccess)
+                embedSuccess.clear_fields()
+        except Exception as error:
+            embedFailure.description=f"**Es ist ein Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure)
+
+    @modsystem.command(name="getconfig", description="Schau dir die aktuelle Config an")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def showconfig(self, interaction: discord.Interaction):
+        try:
+            embed = discord.Embed(title="Config", color=0x0ffc03)
+            embed.description=f"**Channel:**\nGneral Log-Channel: <#{await self.config.guild(interaction.guild).generalLogChannel()}>\nWarn Log-Channel: <#{await self.config.guild(interaction.guild).warnLogChannel()}>\nKick Log-Channel: <#{await self.config.guild(interaction.guild).kickLogChannel()}>\nBan Log-Channel: <#{await self.config.guild(interaction.guild).banLogChannel()}>\nUpdate Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\nJoin Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\nDelete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n\n**Status:**\nBWarn-Log: **{await self.config.guild(interaction.guild).enableWarnLog()}**\nKick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\nBan-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\nUpdate-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\nJoin-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\nDelete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n\n**General:**\nNutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**"
+            await interaction.response.send_message(embed=embed)
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @commands.Cog.listener()
@@ -275,3 +345,24 @@ class Modsystem(commands.Cog):
         global invites
         for guild in self.bot.guilds:
             invites[guild.id] = await guild.invites()
+
+    @commands.Cog.listener()
+    async def on_raw_message_delete(self, data):
+        try:
+            if(await self.config.guild(self.bot.get_guild(data.guild_id)).enableJoinLog()):
+                if(await self.config.guild(self.bot.get_guild(data.guild_id)).useGeneralLogChannel() == True):
+                    channel = self.bot.get_guild(data.guild_id).get_channel(await self.config.guild(self.bot.get_guild(data.guild_id)).generalLogChannel())
+                else:
+                    channel = self.bot.get_guild(data.guild_id).get_channel(await self.config.guild(self.bot.get_guild(data.guild_id)).updateLogChannel())
+                async for entry in self.bot.get_guild(data.guild_id).audit_logs(action=discord.AuditLogAction.message_delete, limit=1):
+                    global message_entry
+                    message_entry = entry
+                if(data.cached_message.pinned):
+                    global pinned
+                    pinned = "Ja"
+                else:
+                    pinned = "Nein"
+                embedLog.description=f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n{data.cached_message.content}\n\nGeschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\nGelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\nWar die Nachricht gepinnt: **{pinned}**"
+                await channel.send(embed=embedLog)
+        except Exception as error:
+            print(error)
