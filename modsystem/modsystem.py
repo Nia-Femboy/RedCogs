@@ -282,6 +282,7 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def showconfig(self, interaction: discord.Interaction):
         try:
+            print(interaction.guild.id)
             embed = discord.Embed(title="Config", color=0x0ffc03)
             embed.description=f"**Channel:**\nGneral Log-Channel: <#{await self.config.guild(interaction.guild).generalLogChannel()}>\nWarn Log-Channel: <#{await self.config.guild(interaction.guild).warnLogChannel()}>\nKick Log-Channel: <#{await self.config.guild(interaction.guild).kickLogChannel()}>\nBan Log-Channel: <#{await self.config.guild(interaction.guild).banLogChannel()}>\nUpdate Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\nJoin Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\nDelete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n\n**Status:**\nBWarn-Log: **{await self.config.guild(interaction.guild).enableWarnLog()}**\nKick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\nBan-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\nUpdate-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\nJoin-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\nDelete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n\n**General:**\nNutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGenerelLogChannel()}**"
             await interaction.response.send_message(embed=embed)
@@ -393,5 +394,13 @@ class Modsystem(commands.Cog):
                         embedString = embedString + "War die Nachricht gepinnt: **Nein**"
                 embedLog.description=embedString
                 await channel.send(embed=embedLog)
+        except Exception as error:
+            print(error)
+
+    @commands.Cog.listener()
+    async def on_invite_create(self, invite):
+        try:
+            global invites
+            invites[invite.guild.id] = await invite.guild.invites()
         except Exception as error:
             print(error)
