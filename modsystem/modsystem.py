@@ -285,6 +285,7 @@ class Modsystem(commands.Cog):
             embed = discord.Embed(title="Config", color=0x0ffc03)
             embed.description=f"**Channel:**\nGneral Log-Channel: <#{await self.config.guild(interaction.guild).generalLogChannel()}>\nWarn Log-Channel: <#{await self.config.guild(interaction.guild).warnLogChannel()}>\nKick Log-Channel: <#{await self.config.guild(interaction.guild).kickLogChannel()}>\nBan Log-Channel: <#{await self.config.guild(interaction.guild).banLogChannel()}>\nUpdate Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\nJoin Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\nDelete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n\n**Status:**\nBWarn-Log: **{await self.config.guild(interaction.guild).enableWarnLog()}**\nKick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\nBan-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\nUpdate-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\nJoin-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\nDelete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n\n**General:**\nNutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGenerelLogChannel()}**"
             await interaction.response.send_message(embed=embed)
+            print(invites)
         except Exception as error:
             embedFailure.description=f"Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
@@ -383,12 +384,16 @@ class Modsystem(commands.Cog):
                 async for entry in self.bot.get_guild(data.guild_id).audit_logs(action=discord.AuditLogAction.message_delete, limit=1):
                     global message_entry
                     message_entry = entry
-                if(data.cached_message.pinned):
-                    global pinned
-                    pinned = "Ja"
-                else:
-                    pinned = "Nein"
-                embedLog.description=f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n{data.cached_message.content}\n\nGeschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\nGelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\nWar die Nachricht gepinnt: **{pinned}**"
+                if(message_entry.created_at < data.cached_message.created_at):
+                    message_entry.created_at = datetime.now()
+                    message_entry.user = data.cached_message.author
+                embedString=f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n{data.cached_message.content}\n\nGeschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\nGelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
+                if(data.cached_message.pinned is not None):
+                    if(data.cached_message.pinned):
+                        embedString = embedString + "War die Nachricht gepinnt: **Ja**"
+                    else:
+                        embedString = embedString + "War die Nachricht gepinnt: **Nein**"
+                embedLog.description=embedString
                 await channel.send(embed=embedLog)
         except Exception as error:
             print(error)
