@@ -295,7 +295,6 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def showconfig(self, interaction: discord.Interaction):
         try:
-            print(interaction.guild.id)
             embed = discord.Embed(title="Config", color=0x0ffc03)
             embed.description=f"**Channel:**\nGneral Log-Channel: <#{await self.config.guild(interaction.guild).generalLogChannel()}>\nWarn Log-Channel: <#{await self.config.guild(interaction.guild).warnLogChannel()}>\nKick Log-Channel: <#{await self.config.guild(interaction.guild).kickLogChannel()}>\nBan Log-Channel: <#{await self.config.guild(interaction.guild).banLogChannel()}>\nUpdate Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\nJoin Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\nDelete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n\n**Status:**\nBWarn-Log: **{await self.config.guild(interaction.guild).enableWarnLog()}**\nKick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\nBan-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\nUpdate-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\nJoin-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\nDelete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n\n**General:**\nNutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**"
             await interaction.response.send_message(embed=embed)
@@ -372,16 +371,18 @@ class Modsystem(commands.Cog):
                         usedInvite = result
                         break
                 await Modsystem.set_new_invites(invites_after, member.guild)
-                embedLog.set_author(name=member.display_name, icon_url=member.display_avatar)
-                embedString=f"{member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** welcher von {usedInvite.inviter.mention} erstellt wurde eingeladen worden\n\nInformationen zu dem Link:\nBenutzungen: **{usedInvite.uses}**\nChannel: {usedInvite.channel.mention}\nGeblieben: **{usedInvite.approximate_member_count}**\nLäuft ab am: "
+                embedLog.set_thumbnail(url=member.display_avatar.url)
+                if(usedInvite.approximate_member_count is None):
+                    usedInvite.approximate_member_count = 0
+                embedString=f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** von {usedInvite.inviter.mention} beigetreten\n\nInformationen zu dem Invite:\nBenutzungen: **{usedInvite.uses}**\nChannel: {usedInvite.channel.mention}\nGeblieben: **{usedInvite.approximate_member_count}**\nLäuft ab am: "
                 if(usedInvite.expires_at is None):
                     embedString += "**Niemals**\n"
                 else:
-                    embedString += f"Läuft ab am: **{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\n"
+                    embedString += f"**{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\n"
                 embedString += f"Link: **[Join]({usedInvite.url})**"
                 embedLog.description=embedString
                 await channel.send(embed=embedLog)
-                embedLog.remove_author()
+                embedLog.set_thumbnail(url=None)
         except Exception as error:
             print(error)
 
