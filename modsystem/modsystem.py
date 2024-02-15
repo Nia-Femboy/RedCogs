@@ -374,12 +374,17 @@ class Modsystem(commands.Cog):
                 embedLog.set_thumbnail(url=member.display_avatar.url)
                 if(usedInvite.approximate_member_count is None):
                     usedInvite.approximate_member_count = 0
-                embedString=f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** von {usedInvite.inviter.mention} beigetreten\n\nInformationen zu dem Invite:\nBenutzungen: **{usedInvite.uses}**\nChannel: {usedInvite.channel.mention}\nGeblieben: **{usedInvite.approximate_member_count}**\nLäuft ab am: "
+                embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** von {usedInvite.inviter.mention} beigetreten\n\n"
+                             f"Informationen zu dem Invite:\n"
+                             f"* Benutzungen: **{usedInvite.uses}**\n"
+                             f"* Channel: {usedInvite.channel.mention}\n"
+                             f"* Geblieben: **{usedInvite.approximate_member_count}**\n"
+                             f"* Läuft ab am: ")
                 if(usedInvite.expires_at is None):
                     embedString += "**Niemals**\n"
                 else:
                     embedString += f"**{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\n"
-                embedString += f"Link: **[Join]({usedInvite.url})**"
+                embedString += f"* Link: **[Join]({usedInvite.url})**"
                 embedLog.description=embedString
                 await channel.send(embed=embedLog)
                 embedLog.set_thumbnail(url=None)
@@ -395,7 +400,7 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_message_delete(self, data):
         try:
-            if(await self.config.guild(self.bot.get_guild(data.guild_id)).enableJoinLog()):
+            if(await self.config.guild(self.bot.get_guild(data.guild_id)).enableDeleteMessageLog()):
                 if(await self.config.guild(self.bot.get_guild(data.guild_id)).useGeneralLogChannel() == True):
                     channel = self.bot.get_guild(data.guild_id).get_channel(await self.config.guild(self.bot.get_guild(data.guild_id)).generalLogChannel())
                 else:
@@ -406,7 +411,10 @@ class Modsystem(commands.Cog):
                 if(message_entry.created_at < data.cached_message.created_at):
                     message_entry.created_at = datetime.now()
                     message_entry.user = data.cached_message.author
-                embedString=f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n{data.cached_message.content}\n\nGeschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\nGelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
+                embedString=(f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n"
+                             f"{data.cached_message.content}\n\n"
+                             f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
+                             f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
                 if(data.cached_message.pinned is not None):
                     if(data.cached_message.pinned):
                         embedString += "War die Nachricht gepinnt: **Ja**"
