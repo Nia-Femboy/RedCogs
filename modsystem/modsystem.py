@@ -29,6 +29,13 @@ class Modsystem(commands.Cog):
             deleteMessageLogChannel=0,
             enableDeleteMessageLog=False,
             enableVoiceLog=False,
+            warnWeight=0,
+            warnKickWeight=0,
+            warnBanWeight=0,
+            warnDynamicReset=False,
+            warnDynamicResetTime=0,
+            warnDynamicResetCount=0,
+            warnResetTime=0,
             users={}
         )
 
@@ -368,7 +375,7 @@ class Modsystem(commands.Cog):
                 for invite in invites[member.guild.id]:
                     result = await Modsystem.get_invite_code(invites_after, invite.code)
                     if(invite.uses < result.uses):
-                        usedInvite = result
+                        usedInvite = await self.bot.fetch_invite(result.code)
                         break
                 await Modsystem.set_new_invites(invites_after, member.guild)
                 embedLog.set_thumbnail(url=member.display_avatar.url)
