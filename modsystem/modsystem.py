@@ -6,7 +6,6 @@ from datetime import datetime, timedelta, timezone
 embedSuccess = discord.Embed(title="Erfolgreich", description="Es wurden folgende Werte gesetzt:", color=0x0ffc03)
 embedFailure = discord.Embed(title="Fehler", color=0xff0000)
 embedLog = discord.Embed(title="Logsystem", color=0xfc7f03)
-invites = {}
 
 class Modsystem(commands.Cog):
 
@@ -242,11 +241,11 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def enablejoinlog(self, interaction: discord.Interaction, activate: bool):
         try:
-            global invites
             if(activate):
                 if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel()):
                     await self.config.guild(interaction.guild).enableJoinLog.set(activate)
-                    invites[interaction.guild.id] = await interaction.guild.invites()
+                    for invite in await interaction.guild.invites():
+                        await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': 0, 'uses': invite.uses})
                     embedSuccess.add_field(name="Join Log", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
                     embedSuccess.clear_fields()
@@ -256,7 +255,6 @@ class Modsystem(commands.Cog):
                     raise Exception("Kein Gültiger Channel angegeben")
             else:
                 await self.config.guild(interaction.guild).enableJoinLog.set(activate)
-                invites[interaction.guild.id] = await interaction.guild.invites()
                 embedSuccess.add_field(name="Join Log", value=activate)
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
@@ -336,15 +334,14 @@ class Modsystem(commands.Cog):
                                f"Join Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\n"
                                f"Delete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n\n"
                                f"**Status:**\n"
-                               f"BWarn-Log: **{await self.config.guild(interaction.guild).enableWarnLog()}**\n"
+                               f"Warn funktion  aktiviert: **{await self.config.guild(interaction.guild).enableWarn()}**"
                                f"Kick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\n"
                                f"Ban-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\n"
                                f"Update-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\n"
                                f"Join-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\n"
                                f"Delete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n\n"
                                f"**General:**\n"
-                               f"Nutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n"
-                               f"Warn funktion  aktiviert: **{await self.config.guild(interaction.guild).enableWarn()}**")
+                               f"Nutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n")
             await interaction.response.send_message(embed=embed)
         except Exception as error:
             embedFailure.description=f"Es ist folgender Fehler aufgetreten:\n\n**{error}**"
@@ -394,14 +391,10 @@ class Modsystem(commands.Cog):
         except Exception as error:
             print(error)
     
-    async def get_invite_code(invite_list, code):
+    async def get_invite_with_code(invite_list, code):
         for inv in invite_list:
             if inv.code == code:
                 return inv
-    
-    async def set_new_invites(new_invites, guild):
-        global invites
-        invites[guild] = new_invites
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -413,17 +406,14 @@ class Modsystem(commands.Cog):
                     channel = member.guild.get_channel(await self.config.guild(member.guild).updateLogChannel())
                 invites_after = await member.guild.invites()
                 usedInvite: discord.invite
-                for invite in invites[member.guild.id]:
-                    result = await Modsystem.get_invite_code(invites_after, invite.code)
-                    if(invite.uses < result.uses):
+                for invite in await self.config.guild(member.guild).userInvites():
+                    result = await Modsystem.get_invite_with_code(invites_after, invite)
+                    if(await self.config.guild(member.guild).userInvites.get_raw(invite, 'uses') < result.uses):
                         usedInvite = result
                         usedInviteInfo = await self.bot.fetch_invite(result.code)
                         break
-                await Modsystem.set_new_invites(invites_after, member.guild)
-                await self.config.guild(member.guild).userInvites.set_raw(usedInvite.code, value={'count': await self.config.guild(member.guild).userInvites.get_raw(usedInvite.code, 'count') + 1})
+                await self.config.guild(member.guild).userInvites.set_raw(usedInvite.code, value={'count': await self.config.guild(member.guild).userInvites.get_raw(usedInvite.code, 'count') + 1, 'uses': await self.config.guild(member.guild).userInvites.get_raw(usedInvite.code, 'uses') + 1})
                 await self.config.guild(member.guild).userInvites.set_raw(member.id, value={'invitecode': usedInvite.code})
-                if(usedInvite.approximate_presence_count is None):
-                    usedInvite.approximate_presence_count = 0
                 embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** von {usedInvite.inviter.mention} beigetreten\n\n"
                              f"Informationen zu dem Invite:\n"
                              f"* Benutzungen: **{usedInvite.uses}**\n"
@@ -447,8 +437,8 @@ class Modsystem(commands.Cog):
     async def on_raw_member_remove(self, data):
         try:
             inviteCode = await self.config.guild(data.user.guild).userInvite.get_raw(data.user.id, 'invitecode')
-            await self.config.guild(data.user.guild).userInvite.clear_raw(data.user.id)
-            await self.config.guild(data.user.guild).userInvite.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).userInvite.get_raw(inviteCode, 'count') - 1})
+            await self.config.guild(data.user.guild).userInvites.clear_raw(data.user.id)
+            await self.config.guild(data.user.guild).userInvites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).userInvites.get_raw(inviteCode, 'count') - 1})
         except Exception as error:
             print(error)
 
@@ -491,6 +481,7 @@ class Modsystem(commands.Cog):
         try:
             global invites
             invites[invite.guild.id] = await invite.guild.invites()
+            await self.config.guild(invite.guild).userInvites.set_raw(invite.code, value={'count': 0})
         except Exception as error:
             print(error)
 
