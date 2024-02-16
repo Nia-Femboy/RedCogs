@@ -443,12 +443,6 @@ class Modsystem(commands.Cog):
             print(error)
 
     @commands.Cog.listener()
-    async def on_ready(self):
-        global invites
-        for guild in self.bot.guilds:
-            invites[guild.id] = await guild.invites()
-
-    @commands.Cog.listener()
     async def on_raw_message_delete(self, data):
         try:
             if(await self.config.guild(self.bot.get_guild(data.guild_id)).enableDeleteMessageLog()):
