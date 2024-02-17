@@ -94,7 +94,7 @@ class Modsystem(commands.Cog):
         try:
             if(interaction.guild.get_channel(int(channelid)) is None):
                 raise Exception("Channel existiert nicht")
-            await self.config.guild(interaction.guild).banlogchannel.set(int(channelid))
+            await self.config.guild(interaction.guild).banLogChannel.set(int(channelid))
             embedSuccess.add_field(name="Ban Log Channel", value=channelid)
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
@@ -334,7 +334,7 @@ class Modsystem(commands.Cog):
                                f"Join Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\n"
                                f"Delete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n\n"
                                f"**Status:**\n"
-                               f"Warn funktion  aktiviert: **{await self.config.guild(interaction.guild).enableWarn()}**"
+                               f"Warn funktion  aktiviert: **{await self.config.guild(interaction.guild).enableWarn()}**\n"
                                f"Kick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\n"
                                f"Ban-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\n"
                                f"Update-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\n"
