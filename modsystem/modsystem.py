@@ -436,7 +436,7 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_member_remove(self, data):
         try:
-            inviteCode = await self.config.guild(data.user.guild).userInvite.get_raw(data.user.id, 'invitecode')
+            inviteCode = await self.config.guild(data.user.guild).userInvites.get_raw(data.user.id, 'invitecode')
             await self.config.guild(data.user.guild).userInvites.clear_raw(data.user.id)
             await self.config.guild(data.user.guild).userInvites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).userInvites.get_raw(inviteCode, 'count') - 1})
         except Exception as error:
