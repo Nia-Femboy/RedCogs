@@ -403,7 +403,7 @@ class Modsystem(commands.Cog):
                 if(await self.config.guild(member.guild).useGeneralLogChannel() == True):
                     channel = member.guild.get_channel(await self.config.guild(member.guild).generalLogChannel())
                 else:
-                    channel = member.guild.get_channel(await self.config.guild(member.guild).updateLogChannel())
+                    channel = member.guild.get_channel(await self.config.guild(member.guild).joinLogChannel())
                 invites_after = await member.guild.invites()
                 usedInvite: discord.invite
                 for invite in await self.config.guild(member.guild).userInvites():
