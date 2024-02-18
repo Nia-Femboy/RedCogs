@@ -473,9 +473,14 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_invite_create(self, invite):
         try:
-            global invites
-            invites[invite.guild.id] = await invite.guild.invites()
             await self.config.guild(invite.guild).userInvites.set_raw(invite.code, value={'count': 0})
+        except Exception as error:
+            print(error)
+
+    @commands.Cog.listener()
+    async def on_invite_delete(self, invite):
+        try:
+            await self.config.guild(invite.guild).userInvites.clear_raw(invite.code)
         except Exception as error:
             print(error)
 
