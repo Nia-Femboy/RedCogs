@@ -414,6 +414,7 @@ class Modsystem(commands.Cog):
                         break
                 await self.config.guild(member.guild).userInvites.set_raw(usedInvite.code, value={'count': await self.config.guild(member.guild).userInvites.get_raw(usedInvite.code, 'count') + 1, 'uses': await self.config.guild(member.guild).userInvites.get_raw(usedInvite.code, 'uses') + 1})
                 await self.config.guild(member.guild).userInvites.set_raw(member.id, value={'invitecode': usedInvite.code})
+                embedLog.set_thumbnail(url=member.display_avatar.url)
                 embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** von {usedInvite.inviter.mention} beigetreten\n\n"
                              f"Informationen zu dem Invite:\n"
                              f"* Benutzungen: **{usedInvite.uses}**\n"
