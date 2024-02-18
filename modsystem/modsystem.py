@@ -251,7 +251,7 @@ class Modsystem(commands.Cog):
                     embedSuccess.clear_fields()
                 elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGeneralLogChannel()):
                     raise Exception("Kein gültiger genereller Channel definiert")
-                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).enableJoinLog())) is None):
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).joinLogChannel())) is None):
                     raise Exception("Kein Gültiger Channel angegeben")
             else:
                 await self.config.guild(interaction.guild).enableJoinLog.set(activate)
