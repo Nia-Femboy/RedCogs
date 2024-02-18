@@ -242,7 +242,7 @@ class Modsystem(commands.Cog):
     async def enablejoinlog(self, interaction: discord.Interaction, activate: bool):
         try:
             if(activate):
-                if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel()):
+                if((interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel()) or (interaction.guild.get_channel(int(await self.config.guild(interaction.guild).joinLogChannel)) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False)):
                     await self.config.guild(interaction.guild).enableJoinLog.set(activate)
                     for invite in await interaction.guild.invites():
                         await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': 0, 'uses': invite.uses})
