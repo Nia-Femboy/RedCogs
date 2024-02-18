@@ -324,7 +324,6 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def showconfig(self, interaction: discord.Interaction):
         try:
-            await Modsystem.on_member_join(self, interaction.user)
             embed = discord.Embed(title="Config", color=0x0ffc03)
             embed.description=(f"**Channel:**\n"
                                f"Gneral Log-Channel: <#{await self.config.guild(interaction.guild).generalLogChannel()}>\n"
@@ -390,7 +389,7 @@ class Modsystem(commands.Cog):
                     await channel.send(embed=embedLog)
                     embedLog.clear_fields()
         except Exception as error:
-            print("Audit log: " + error)
+            print(error)
     
     async def get_invite_with_code(invite_list, code):
         for inv in invite_list:
@@ -436,7 +435,7 @@ class Modsystem(commands.Cog):
                 await channel.send(embed=embedLog)
                 embedLog.set_thumbnail(url=None)
         except Exception as error:
-            print("Member join: " + error)
+            print(error)
 
     @commands.Cog.listener()
     async def on_raw_member_remove(self, data):
@@ -445,7 +444,7 @@ class Modsystem(commands.Cog):
             await self.config.guild(data.user.guild).userInvites.clear_raw(data.user.id)
             await self.config.guild(data.user.guild).userInvites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).userInvites.get_raw(inviteCode, 'count') - 1})
         except Exception as error:
-            print("Member remove: " + error)
+            print(error)
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, data):
@@ -473,21 +472,21 @@ class Modsystem(commands.Cog):
                 embedLog.description=embedString
                 await channel.send(embed=embedLog)
         except Exception as error:
-            print("Message delete: " + error)
+            print(error)
 
     @commands.Cog.listener()
     async def on_invite_create(self, invite):
         try:
             await self.config.guild(invite.guild).userInvites.set_raw(invite.code, value={'count': 0})
         except Exception as error:
-            print("Invite create: " + error)
+            print(error)
 
     @commands.Cog.listener()
     async def on_invite_delete(self, invite):
         try:
             await self.config.guild(invite.guild).userInvites.clear_raw(invite.code)
         except Exception as error:
-            print("Invite delete:" + error)
+            print(error)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -496,4 +495,4 @@ class Modsystem(commands.Cog):
                 if(before.channel is not None and after.channel is None):
                     await before.channel.send(f"**{member.display_name}** hat den Channel verlassen")
         except Exception as error:
-            print("Voice: " + error)
+            print(error)
