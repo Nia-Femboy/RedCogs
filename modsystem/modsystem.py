@@ -323,7 +323,7 @@ class Modsystem(commands.Cog):
     @modsystem.command(name="getconfig", description="Schau dir die aktuelle Config an")
     @app_commands.checks.has_permissions(administrator=True)
     async def showconfig(self, interaction: discord.Interaction):
-        #try:
+        try:
             await Modsystem.on_member_join(self, interaction.user)
             embed = discord.Embed(title="Config", color=0x0ffc03)
             embed.description=(f"**Channel:**\n"
@@ -344,9 +344,9 @@ class Modsystem(commands.Cog):
                                f"**General:**\n"
                                f"Nutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n")
             await interaction.response.send_message(embed=embed)
-        # except Exception as error:
-        #     embedFailure.description=f"Es ist folgender Fehler aufgetreten:\n\n**{error}**"
-        #     await interaction.response.send_message(embed=embedFailure)
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender Fehler aufgetreten:\n\n**{error}**"
+            await interaction.response.send_message(embed=embedFailure)
 
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry):
