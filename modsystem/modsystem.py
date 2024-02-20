@@ -431,7 +431,7 @@ class Modsystem(commands.Cog):
                     await channel.send(embed=embedLog)
                     embedLog.clear_fields()
         except Exception as error:
-            print("Fehler im Auditlog: " + error)
+            print("Fehler im Auditlog: " + str(error))
     
     async def get_invite_with_code(invite_list, code):
         for inv in invite_list:
