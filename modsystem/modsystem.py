@@ -317,6 +317,7 @@ class Modsystem(commands.Cog):
             await self.config.guild(interaction.guild).enableVoiceLog.set(activate)
             embedSuccess.add_field(name="Voice Log", value=activate)
             await interaction.response.send_message(embed=embedSuccess)
+            embedSuccess.clear_fields()
         except Exception as error:
             embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}"
             await interaction.response.send_message(embed=embedFailure)
@@ -339,6 +340,7 @@ class Modsystem(commands.Cog):
                     raise Exception("Kein gültiger Channel hinterlegt")
             embedSuccess.add_field(name="Aktiviere Warn funktion", value=activate)
             await interaction.response.send_message(embed=embedSuccess)
+            embedSuccess.clear_fields()
         except Exception as error:
             embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}"
             await interaction.response.send_message(embed=embedFailure)
@@ -362,7 +364,8 @@ class Modsystem(commands.Cog):
                                f"Ban-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\n"
                                f"Update-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\n"
                                f"Join-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\n"
-                               f"Delete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n\n"
+                               f"Delete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n"
+                               f"Voice-Log: **{await self.config.guild(interaction.guild).enableVoiceLog()}**\n\n"
                                f"**General:**\n"
                                f"Nutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n")
             await interaction.response.send_message(embed=embed)
