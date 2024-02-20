@@ -205,7 +205,7 @@ class Modsystem(commands.Cog):
                     await interaction.response.send_message(embed=embedSuccess)
                     embedSuccess.clear_fields()
                 elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).kickLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
-                    await self.config.guild(interaction.guild).enableUpdateLog.set(activate)
+                    await self.config.guild(interaction.guild).enableKickLog.set(activate)
                     embedSuccess.add_field(name="Client-Update Log", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
                     embedSuccess.clear_fields()
@@ -292,7 +292,7 @@ class Modsystem(commands.Cog):
                     await interaction.response.send_message(embed=embedSuccess)
                     embedSuccess.clear_fields()
                 elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).deleteMessageLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
-                    await self.config.guild(interaction.guild).enableUpdateLog.set(activate)
+                    await self.config.guild(interaction.guild).enableDeleteMessageLog.set(activate)
                     embedSuccess.add_field(name="Client-Update Log", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
                     embedSuccess.clear_fields()
