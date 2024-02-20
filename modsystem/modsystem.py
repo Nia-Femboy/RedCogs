@@ -384,6 +384,7 @@ class Modsystem(commands.Cog):
                     await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': await self.config.guild(interaction.guild).userInvites.get_raw(invite.code, 'count'), 'uses': invite.uses})
             embedSuccess.add_field(name="Update der Invite-Codes", value="Erfolgreich")
             await interaction.response.send_message(embed=embedSuccess)
+            embedSuccess.clear_fields()
         except Exception as error:
             embedFailure.description=f"Es ist folgender Fehler aufgetreten:\n\n**{error}"
             await interaction.response.send_message(embed=embedFailure)
@@ -483,7 +484,7 @@ class Modsystem(commands.Cog):
         try:
             inviteCode = await self.config.guild(data.user.guild).userInvites.get_raw(data.user.id, 'invitecode')
             await self.config.guild(data.user.guild).userInvites.clear_raw(data.user.id)
-            await self.config.guild(data.user.guild).userInvites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).userInvites.get_raw(inviteCode, 'count') - 1})
+            await self.config.guild(data.user.guild).userInvites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).userInvites.get_raw(inviteCode, 'count') - 1, 'uses': await self.config.guild(data.user.guild).userInvites.get_raw(inviteCode, 'uses')})
         except Exception as error:
             print("Fehler bei Member-Remove: " + str(error))
 
