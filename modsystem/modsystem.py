@@ -495,7 +495,7 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_invite_create(self, invite):
         try:
-            await self.config.guild(invite.guild).userInvites.set_raw(invite.code, value={'count': 0})
+            await self.config.guild(invite.guild).userInvites.set_raw(invite.code, value={'count': 0, 'uses': 0})
         except Exception as error:
             print("Fehler bei Invite-Create: " + str(error))
 
