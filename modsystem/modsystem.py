@@ -233,7 +233,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}**"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enablejoinlog", description="Aktiviere oder deaktiviere das Loggen neuer User beim Joinen")
@@ -245,7 +245,10 @@ class Modsystem(commands.Cog):
                 if((interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel()) or (interaction.guild.get_channel(int(await self.config.guild(interaction.guild).joinLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False)):
                     await self.config.guild(interaction.guild).enableJoinLog.set(activate)
                     for invite in await interaction.guild.invites():
-                        await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': 0, 'uses': invite.uses})
+                        if(invite.code in await self.config.guild(interaction.guild).userInvites()):
+                            await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': await self.config.guild(interaction.guild).userInvites.get_raw(invite.code, 'count'), 'uses': invite.uses})
+                        else:
+                            await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': 0, 'uses': invite.uses})
                     embedSuccess.add_field(name="Join Log", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
                     embedSuccess.clear_fields()
@@ -259,7 +262,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}**"
+            embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enabledeletemessagelog", description="Aktiviere oder deaktiviere das Loggen gelöschter Nachrichten")
@@ -347,6 +350,21 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"Es ist folgender Fehler aufgetreten:\n\n**{error}**"
             await interaction.response.send_message(embed=embedFailure)
 
+    @modsystem.command(name="updateinvitecodes", description="Update die gespeicherten Invite-Codes")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def updateinvitecodes(self, interaction: discord.Interaction):
+        try:
+            for invite in await interaction.guild.invites():
+                if(await self.config.guild(interaction.guild).userInvites.get_raw(invite.code) is None):
+                    await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': 0, 'uses': invite.uses})
+                else:
+                    await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': await self.config.guild(interaction.guild).userInvites.get_raw(invite.code, 'count'), 'uses': invite.uses})
+            embedSuccess.add_field(name="Update der Invite-Codes", value="Erfolgreich")
+            await interaction.response.send_message(embed=embedSuccess)
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender Fehler aufgetreten:\n\n**{error}**"
+            await interaction.response.send_message(embed=embedFailure)
+
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry):
         try:
@@ -389,7 +407,7 @@ class Modsystem(commands.Cog):
                     await channel.send(embed=embedLog)
                     embedLog.clear_fields()
         except Exception as error:
-            print(error)
+            print("Fehler im Auditlog: " + error)
     
     async def get_invite_with_code(invite_list, code):
         for inv in invite_list:
@@ -435,7 +453,7 @@ class Modsystem(commands.Cog):
                 await channel.send(embed=embedLog)
                 embedLog.set_thumbnail(url=None)
         except Exception as error:
-            print(error)
+            print("Fehler bei Member-Join: " + str(error))
 
     @commands.Cog.listener()
     async def on_raw_member_remove(self, data):
@@ -444,7 +462,7 @@ class Modsystem(commands.Cog):
             await self.config.guild(data.user.guild).userInvites.clear_raw(data.user.id)
             await self.config.guild(data.user.guild).userInvites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).userInvites.get_raw(inviteCode, 'count') - 1})
         except Exception as error:
-            print(error)
+            print("Fehler bei Member-Remove: " + str(error))
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, data):
@@ -460,8 +478,8 @@ class Modsystem(commands.Cog):
                 if(message_entry.created_at < data.cached_message.created_at):
                     message_entry.created_at = datetime.now()
                     message_entry.user = data.cached_message.author
-                embedString=(f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n"
-                             f"{data.cached_message.content}\n\n"
+                embedString=(f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n\n"
+                             f"{data.cached_message.content}\n\n\n"
                              f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
                              f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
                 if(data.cached_message.pinned is not None):
@@ -472,21 +490,21 @@ class Modsystem(commands.Cog):
                 embedLog.description=embedString
                 await channel.send(embed=embedLog)
         except Exception as error:
-            print(error)
+            print("Fehler bei Message-Log: " + str(error))
 
     @commands.Cog.listener()
     async def on_invite_create(self, invite):
         try:
             await self.config.guild(invite.guild).userInvites.set_raw(invite.code, value={'count': 0})
         except Exception as error:
-            print(error)
+            print("Fehler bei Invite-Create: " + str(error))
 
     @commands.Cog.listener()
     async def on_invite_delete(self, invite):
         try:
             await self.config.guild(invite.guild).userInvites.clear_raw(invite.code)
         except Exception as error:
-            print(error)
+            print("Fehler bei Invite-Delete: " + str(error))
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -495,4 +513,4 @@ class Modsystem(commands.Cog):
                 if(before.channel is not None and after.channel is None):
                     await before.channel.send(f"**{member.display_name}** hat den Channel verlassen")
         except Exception as error:
-            print(error)
+            print("Fehler bei Voice-Log: " + str(error))
