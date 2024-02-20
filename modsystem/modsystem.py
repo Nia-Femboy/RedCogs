@@ -204,7 +204,7 @@ class Modsystem(commands.Cog):
                     embedSuccess.add_field(name="Kick Log", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
                     embedSuccess.clear_fields()
-                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).kickLogChannel())) is None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).kickLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
                     await self.config.guild(interaction.guild).enableUpdateLog.set(activate)
                     embedSuccess.add_field(name="Client-Update Log", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
@@ -233,7 +233,7 @@ class Modsystem(commands.Cog):
                     embedSuccess.add_field(name="Client-Update Log", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
                     embedSuccess.clear_fields()
-                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).updateLogChannel())) is None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).updateLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
                     await self.config.guild(interaction.guild).enableUpdateLog.set(activate)
                     embedSuccess.add_field(name="Client-Update Log", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
@@ -291,7 +291,7 @@ class Modsystem(commands.Cog):
                     embedSuccess.add_field(name="DeleteMessageLog", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
                     embedSuccess.clear_fields()
-                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).deleteMessageLogChannel())) is None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
+                elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).deleteMessageLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
                     await self.config.guild(interaction.guild).enableUpdateLog.set(activate)
                     embedSuccess.add_field(name="Client-Update Log", value=activate)
                     await interaction.response.send_message(embed=embedSuccess)
