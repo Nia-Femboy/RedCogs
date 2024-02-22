@@ -1,4 +1,7 @@
 import discord
+import io
+
+from discord.utils import MISSING
 
 from redbot.core import commands, app_commands, Config
 from datetime import datetime, timedelta, timezone
@@ -54,7 +57,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setwarninglogchannel", description="Setze den Logchannel für warning")
@@ -69,7 +72,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setkicklogchannel", description="Sete den Logchannel für kicks")
@@ -84,7 +87,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setbanlogchannel", description="Setzte den Logchannel für bans")
@@ -99,7 +102,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setupdatelogchannel", description="Setze den Logchanneö für Client-Updates")
@@ -114,7 +117,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setjoinlogchannel", description="Setze den Logchannel für Joins")
@@ -129,7 +132,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="setmessagedeletelogchannel", description="Setze den Logchannel für Delete-Messages")
@@ -144,7 +147,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="usegenerallogchannel", description="Nutze einen generellen Logchannel")
@@ -161,7 +164,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enablebanlog", description="Aktiviere oder deaktiviere das Loggen der Bans")
@@ -190,7 +193,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enablekicklog", description="Aktiviere oder deaktiviere das Loggen der Kicks")
@@ -219,7 +222,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enableupdatelog", description="Aktiviere oder deaktiviere das Loggen der Client-Updates")
@@ -248,7 +251,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enablejoinlog", description="Aktiviere oder deaktiviere das Loggen neuer User beim Joinen")
@@ -277,7 +280,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enabledeletemessagelog", description="Aktiviere oder deaktiviere das Loggen gelöschter Nachrichten")
@@ -306,7 +309,7 @@ class Modsystem(commands.Cog):
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enablevoicelog", description="Aktiviere oder deaktiviere das Loggen von Clients die den Voicechannel verlassen haben")
@@ -319,7 +322,7 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="enablewarn", description="Aktiviere die Warn funktion")
@@ -327,22 +330,20 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def enablewarn(self, interaction: discord.Interaction, activate: bool):
         try:
-            if(activate == False):
-                await self.config.guild(interaction.guild).enableWarn.set(activate)
-            else:
-                if(await self.config.guild(interaction.guild).warnUseChannel() == False):
+            if(activate):
+                if((await self.config.guild(interaction.guild).warnUseChannel() == False) or (await self.config.guild(interaction.guild).useGeneralLogChannel() and interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None)):
                     await self.config.guild(interaction.guild).enableWarn.set(activate)
                 elif(await self.config.guild(interaction.guild).warnUseChannel() and interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnLogChannel())) is None):
                     raise Exception("Kein gültiger Channel definiert")
-                if(await self.config.guild(interaction.guild).useGeneralLogChannel() and interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None):
-                    await self.config.guild(interaction.guild).enableWarn.set(activate)
-                else:
-                    raise Exception("Kein gültiger Channel hinterlegt")
+                elif(await self.config.guild(interaction.guild).useGeneralLogChannel() and interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None):
+                    raise Exception("Kein gültiger genereller Channel definiert")
+            else:
+                await self.config.guild(interaction.guild).enableWarn.set(activate)
             embedSuccess.add_field(name="Aktiviere Warn funktion", value=activate)
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"**Es ist ein Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="getconfig", description="Schau dir die aktuelle Config an")
@@ -370,7 +371,7 @@ class Modsystem(commands.Cog):
                                f"Nutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n")
             await interaction.response.send_message(embed=embed)
         except Exception as error:
-            embedFailure.description=f"Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="updateinvitecodes", description="Update die gespeicherten Invite-Codes")
@@ -386,8 +387,64 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
         except Exception as error:
-            embedFailure.description=f"Es ist folgender Fehler aufgetreten:\n\n**{error}"
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
+
+    @app_commands.command()
+    @app_commands.describe(user="Der User der verwarnt werden soll", reason="Grund der Verwarnung", stufe="Die Schwere der Verwarnung (Optional)")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def warn(self, interaction: discord.Interaction, user: discord.User, reason: str, stufe: int = None):
+        try:
+            if(stufe is not None):
+                if(await self.config.guild(interaction.guild).userWarns.get_raw(user.id) is None):
+                    currentTime = datetime.now().astimezone(tz=None).strftime('%d-%m-%Y : %H:%M')
+                    #
+                    #   Need to set Stufen-Variablen (Multiplikator)
+                    #
+                    await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'currentReason': reason, 'currentPoints': await self.config.guild(interaction.guild).warnWeight(), 'totalPoints': await self.config.guild(interaction.guild).warnWeight(), 'firstWarn': currentTime, 'lastWartn': None, 'kickCount': None, 'banned': None})
+            else:
+                currentTime = datetime.now().astimezone(tz=None).strftime('%d-%m-%Y : %H:%M')
+                if(user.id not in await self.config.guild(interaction.guild).userWarns()):
+                    await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'currentReason': reason,
+                                                                                                 'currentPoints': await self.config.guild(interaction.guild).warnWeight(),
+                                                                                                 'totalPoints': await self.config.guild(interaction.guild).warnWeight(),
+                                                                                                 'firstWarn': currentTime,
+                                                                                                 'lastWarn': currentTime,
+                                                                                                 'kickCount': 0,
+                                                                                                 'banned': False})
+                    await interaction.response.send_message("User erfolgreich gewarnt")
+                else:
+                    currentPoints = await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints') + await self.config.guild(interaction.guild).warnWeight()
+                    totalPoints = await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'totalPoints') + await self.config.guild(interaction.guild).warnWeight()
+                    if(currentPoints < await self.config.guild(interaction.guild).warnKickWeight()):
+                        await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'currentReason': reason,
+                                                                                                     'currentPoints': currentPoints,
+                                                                                                     'totalPoints': totalPoints,
+                                                                                                     'firstWarn': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'firstWarn'),
+                                                                                                     'lastWarn': currentTime,
+                                                                                                     'kickCount': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount'),
+                                                                                                     'banned': False})
+                        await interaction.response.send_message("User erfolgreich gewarnt")
+                    elif(currentPoints >= await self.config.guild(interaction.guild).warnKickWieght() and await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints') < await self.config.guild(interaction.guild).warnKickWeight()):
+                        await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'currentReason': reason,
+                                                                                                    'currentPoints': currentPoints,
+                                                                                                    'totalPoints': totalPoints,
+                                                                                                    'firstWarn': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'firstWarn'),
+                                                                                                    'lastWarn': currentTime,
+                                                                                                    'kickCount': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount') + 1,
+                                                                                                    'banned': False})
+                        await interaction.response.send_message("User gekickt")
+                    elif(currentPoints >= await self.config.guild(interaction.guild).warnBanWeight() and await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints') < await self.config.guild(interaction.guild).warnBanWeight()):
+                        await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'currentReason': reason,
+                                                                                                    'currentPoints': currentPoints,
+                                                                                                    'totalPoints': totalPoints,
+                                                                                                    'firstWarn': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'firstWarn'),
+                                                                                                    'lastWarn': currentTime,
+                                                                                                    'kickCount': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount'),
+                                                                                                    'banned': True})
+                        await interaction.response.send_message("User gebannt")
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
 
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry):
@@ -502,17 +559,35 @@ class Modsystem(commands.Cog):
                 if(message_entry.created_at < data.cached_message.created_at):
                     message_entry.created_at = datetime.now()
                     message_entry.user = data.cached_message.author
-                embedString=(f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n\n"
-                             f"{data.cached_message.content}\n\n\n"
-                             f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
-                             f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
-                if(data.cached_message.pinned is not None):
-                    if(data.cached_message.pinned):
-                        embedString += "War die Nachricht gepinnt: **Ja**"
+                if(data.cached_message.attachments == []):
+                    embedString=(f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n\n"
+                                f"{data.cached_message.content}\n\n\n"
+                                f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
+                                f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
+                    if(data.cached_message.pinned is not None):
+                        if(data.cached_message.pinned):
+                            embedString += "War die Nachricht gepinnt: **Ja**"
+                        else:
+                            embedString += "War die Nachricht gepinnt: **Nein**"
+                    embedLog.description=embedString
+                    await channel.send(embed=embedLog)
+                else:
+                    if(len(data.cached_message.attachments) > 1):
+                        word = "Folgende Bilder wurden"
                     else:
-                        embedString += "War die Nachricht gepinnt: **Nein**"
-                embedLog.description=embedString
-                await channel.send(embed=embedLog)
+                        word = "Folgendes Bild wurde"
+                    embedString=(f"**{word} aus <#{data.channel_id}> gelöscht**\n\n"
+                                f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
+                                f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
+                #pic = io.BytesIO(await data.cached_message.attachments[0].read(use_cached=True))
+                #await channel.send(file=discord.File(pic, 'image.png'))
+                    embedLog.description=embedString
+                    await channel.send(embed=embedLog)
+                    for pic in data.cached_message.attachments:
+                        await channel.send(pic)
+                    #await channel.send(data.cached_message.attachments[0])
+                    #await channel.send(data.cached_message.attachments[1])
+                    #await channel.send(data.cached_message.attachments[2])
         except Exception as error:
             print("Fehler bei Message-Log: " + str(error))
 
