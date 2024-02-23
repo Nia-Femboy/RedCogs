@@ -45,6 +45,21 @@ class Modsystem(commands.Cog):
 
     modsystem = app_commands.Group(name="modlog", description="Modlog setup commands")
 
+    @modsystem.command(name="setup", description="Allgemeines Setup des Systems")
+    @app_commands.describe(choice="Bitte den gewünschten Parameter auswählen")
+    @app_commands.choices(choice=[
+        app_commands.Choice(name="General Logchannel", value="gChannel"),
+        app_commands.Choice(name="Warn Logchannel", value="wChannel"),
+        app_commands.Choice(name="Kick Logchannel", value="kChannel")
+    ])
+    @app_commands.checks.has_permissions(administrator=True)
+    async def setup(self, interaction: discord.Interaction, choice: app_commands.Choice[str]):
+        try:
+            print(1)
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:''\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure)
+
     @modsystem.command(name="setgenerallogchannel", description="Setze den Allgemeinen Logchannel")
     @app_commands.describe(channelid="Die ChannelID des Allgemeinen Logchannels")
     @app_commands.checks.has_permissions(administrator=True)
@@ -559,7 +574,7 @@ class Modsystem(commands.Cog):
                 if(message_entry.created_at < data.cached_message.created_at):
                     message_entry.created_at = datetime.now()
                     message_entry.user = data.cached_message.author
-                if(data.cached_message.attachments == []):
+                if(data.cached_message.attachments == [] and data.cached_message.embeds == []):
                     embedString=(f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n\n"
                                 f"{data.cached_message.content}\n\n\n"
                                 f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
@@ -571,7 +586,7 @@ class Modsystem(commands.Cog):
                             embedString += "War die Nachricht gepinnt: **Nein**"
                     embedLog.description=embedString
                     await channel.send(embed=embedLog)
-                else:
+                elif(data.cached_message.embeds == []):
                     if(len(data.cached_message.attachments) > 1):
                         word = "Folgende Bilder wurden"
                     else:
@@ -585,9 +600,17 @@ class Modsystem(commands.Cog):
                     await channel.send(embed=embedLog)
                     for pic in data.cached_message.attachments:
                         await channel.send(pic)
-                    #await channel.send(data.cached_message.attachments[0])
-                    #await channel.send(data.cached_message.attachments[1])
-                    #await channel.send(data.cached_message.attachments[2])
+                else:
+                    if(len(data.cached_message.embeds) > 1):
+                        word = "Folgende Embeds wurden"
+                    else:
+                        word = "Folgendes Embed wurde"
+                    embedString=(f"**{word} aus <#{data.channel_id}> gelöscht**\n\n"
+                                f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
+                                f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
+                    embedLog.description=embedString
+                    data.cached_message.embeds.insert(0, embedLog)
+                    await channel.send(embeds=data.cached_message.embeds)
         except Exception as error:
             print("Fehler bei Message-Log: " + str(error))
 
