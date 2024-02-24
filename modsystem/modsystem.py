@@ -474,10 +474,10 @@ class Modsystem(commands.Cog):
                 raise Exception("Die Funktion ist momentan nicht aktiviert")
             if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).warnModROle()).position):
                 raise Exception("Keine Berechtigung diesen Befehl zu nutzen")
-            if(interaction.user.top_role.position < user.top_role.position):
-                raise Exception("Du kannst keine Leute verwarnen die einen höheren Rang haben als du")
             if(user.bot):
                 raise Exception("Du kannst keinen Bot verwarnen")
+            if(interaction.user.top_role.position < user.top_role.position):
+                raise Exception("Du kannst keine Leute verwarnen die einen höheren Rang haben als du")
             embed = discord.Embed(title="Aktion Erfolgreich", color=0x0ffc03)
             embedDM = discord.Embed(title="!!!Important/Wichtig!!!", color=0xff0000)
             if(await self.config.guild(interaction.guild).warnUseChannel() and await self.config.guild(interaction.guild).warnUseDM()):
