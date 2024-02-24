@@ -145,25 +145,29 @@ class Modsystem(commands.Cog):
                 case "warn":
 
                     if(status):
-                        if((await self.config.guild(interaction.guild).warnUseChannel() == False) or (await self.config.guild(interaction.guild).useGeneralLogChannel() and interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None)):
-                            if(await self.config.guild(interaction.guild).warnResetTime() > 0 and await self.config.guild(interaction.guild).warnDDynamicReset() == False):
+                        if((interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnLogChannel())) is not None) or (await self.config.guild(interaction.guild).useGeneralLogChannel() and interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None)):
+                            if(await self.config.guild(interaction.guild).warnResetTime() > 0 and await self.config.guild(interaction.guild).warnDynamicReset() == False):
                                 await self.config.guild(interaction.guild).enableWarn.set(status)
                                 Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(interaction.guild).warnResetTime())
-                                Modsystem.remove_warn_points.start(self)
+                                if(Modsystem.remove_warn_points.is_running == False):
+                                    Modsystem.remove_warn_points.start(self)
+                                embedSuccess.add_field(name="Aktiviere Warn funktion", value=status)
                             elif(await self.config.guild(interaction.guild).warnDynamicReset() and await self.config.guild(interaction.guild).warnDynamicResetTime() > 0):
                                 await self.config.guild(interaction.guild).enableWarn.set(status)
                                 Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(interaction.guild).warnDynamicResetTime())
-                                Modsystem.remove_warn_points.start(self)
+                                if(Modsystem.remove_warn_points.is_running == False):
+                                    Modsystem.remove_warn_points.start(self)
+                                embedSuccess.add_field(name="Aktiviere Warn funktion", value=status)
                             else:
-                                await self.config.guild(interaction.guild).enableWarn.set(status)
+                                raise Exception("Die Resettime muss größer 0 sein")
                         elif(await self.config.guild(interaction.guild).warnUseChannel() and interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnLogChannel())) is None):
                             raise Exception("Kein gültiger Channel definiert")
                         elif(await self.config.guild(interaction.guild).useGeneralLogChannel() and interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None):
                             raise Exception("Kein gültiger genereller Channel definiert")
                     else:
                         await self.config.guild(interaction.guild).enableWarn.set(status)
-                        Modsystem.remove_warn_points.stop()
-                    embedSuccess.add_field(name="Aktiviere Warn funktion", value=status)
+                        Modsystem.remove_warn_points.cancel()
+                        embedSuccess.add_field(name="Aktiviere Warn funktion", value=status)
 
                 case "kLog":
 
