@@ -434,9 +434,9 @@ class Modsystem(commands.Cog):
                                f"Statischer Punkteabbau Intervall: **{await self.config.guild(interaction.guild).warnResetTime()}**\n"
                                f"Nutze Channel für die Verwarnungen: **{await self.config.guild(interaction.guild).warnUseChannel()}**\n"
                                f"Nutze DM für die Verwarnungen: **{await self.config.guild(interaction.guild).warnUseDM()}**\n"
-                               f"Modrolle: {interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).mention}\n\n"
+                               f"Mindestrolle die Verwarnen kann: {interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).mention}\n\n"
                                f"**General:**\n"
-                               f"Nutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n")
+                               f"Nutze den generellen Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n")
             await interaction.response.send_message(embed=embed)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
