@@ -472,12 +472,12 @@ class Modsystem(commands.Cog):
         try:
             if(await self.config.guild(interaction.guild).enableWarn() == False):
                 raise Exception("Die Funktion ist momentan nicht aktiviert")
-            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).warnModROle()).position):
+            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
                 raise Exception("Keine Berechtigung diesen Befehl zu nutzen")
-            if(user.bot):
-                raise Exception("Du kannst keinen Bot verwarnen")
             if(interaction.user.top_role.position < user.top_role.position):
                 raise Exception("Du kannst keine Leute verwarnen die einen höheren Rang haben als du")
+            if(user.bot):
+                raise Exception("Du kannst keinen Bot verwarnen")
             embed = discord.Embed(title="Aktion Erfolgreich", color=0x0ffc03)
             embedDM = discord.Embed(title="!!!Important/Wichtig!!!", color=0xff0000)
             if(await self.config.guild(interaction.guild).warnUseChannel() and await self.config.guild(interaction.guild).warnUseDM()):
@@ -496,7 +496,7 @@ class Modsystem(commands.Cog):
                 recipientUser = user
             if(stufe is not None):
                 if(0 > stufe > 3):
-                    raise Exception("Die auszuwählende Stufe geht von 1 bis 3")
+                    raise Exception("Die auszuwählenden Stufen geht von 1 bis 3")
                 else:
                     match stufe:
                         case 1:
