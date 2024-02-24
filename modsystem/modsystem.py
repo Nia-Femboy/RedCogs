@@ -116,7 +116,7 @@ class Modsystem(commands.Cog):
     @app_commands.describe(choice="Die gewünschte Funktion", status="Ein- oder Ausschalten")
     @app_commands.choices(choice=[
         app_commands.Choice(name="Nutze den Generellen Logchannel", value="useGChannel"),
-        app_commands.Choice(name="Warnlog", value="wLog"),
+        app_commands.Choice(name="Warnfunktion", value="warn"),
         app_commands.Choice(name="Kicklog", value="kLog"),
         app_commands.Choice(name="Banlog", value="bLog"),
         app_commands.Choice(name="Updatelog", value="uLog"),
@@ -142,7 +142,7 @@ class Modsystem(commands.Cog):
                         await self.config.guild(interaction.guild).useGeneralLogChannel.set(status)
                         embedSuccess.add_field(name="Nutze General Log Channel", value=status, inline=True)
 
-                case "wLog":
+                case "warn":
 
                     if(status):
                         if((await self.config.guild(interaction.guild).warnUseChannel() == False) or (await self.config.guild(interaction.guild).useGeneralLogChannel() and interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None)):
@@ -289,16 +289,22 @@ class Modsystem(commands.Cog):
 
                 case "warnWeight":
 
+                    if(wert == None):
+                        raise Exception("Bitte den wert festlegen")
                     await self.config.guild(interaction.guild).warnWeight.set(int(wert))
                     embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
 
                 case "warnKickWeight":
 
+                    if(wert == None):
+                        raise Exception("Bitte den wert festlegen")
                     await self.config.guild(interaction.guild).warnKickWeight.set(int(wert))
                     embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
 
                 case "warnBanWeight":
 
+                    if(wert == None):
+                        raise Exception("Bitte den wert festlegen")
                     await self.config.guild(interaction.guild).warnBanWeight.set(int(wert))
                     embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
 
@@ -306,16 +312,17 @@ class Modsystem(commands.Cog):
 
                     if(activate == None):
                         raise Exception("Bitte activate festlegen")
+                    if(activate):
+                        Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(interaction.guild).warnDynamicResetTime())
                     else:
-                        if(activate):
-                            Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(interaction.guild).warnDynamicResetTime())
-                        else:
-                            Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(interaction.guild).warnResetTime())
-                        await self.config.guild(interaction.guild).warnDynamicReset.set(activate)
-                        embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=activate)
+                        Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(interaction.guild).warnResetTime())
+                    await self.config.guild(interaction.guild).warnDynamicReset.set(activate)
+                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=activate)
 
                 case "warnDynamicResetTime":
 
+                    if(wert == None):
+                        raise Exception("Bitte den wert festlegen")
                     if(await self.config.guild(interaction.guild).warnDynamicReset() and await self.config.guild(interaction.guild).enableWarn()):
                         Modsystem.remove_warn_points.change_interval(minutes=int(wert))
                     await self.config.guild(interaction.guild).warnDynamicResetTime.set(int(wert))
@@ -323,11 +330,15 @@ class Modsystem(commands.Cog):
 
                 case "warnDynamicResetCount":
 
+                    if(wert == None):
+                        raise Exception("Bitte den wert festlegen")
                     await self.config.guild(interaction.guild).warnDynamicResetCount.set(int(wert))
                     embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
 
                 case "warnResetTime":
 
+                    if(wert == None):
+                        raise Exception("Bitte den wert festlegen")
                     if(await self.config.guild(interaction.guild).warnDynamicReset() == False and await self.config.guild(interaction.guild).enableWarn()):
                         Modsystem.remove_warn_points.change_interval(minutes=int(wert))
                     await self.config.guild(interaction.guild).warnResetTime.set(int(wert))
@@ -350,11 +361,14 @@ class Modsystem(commands.Cog):
                             embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=activate)
                         else:
                             raise Exception("Kein gültiger Channel festgelegt")
+                    else:
                         await self.config.guild(interaction.guild).warnUseChannel.set(activate)
                         embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=activate)
 
                 case "warnModRole":
 
+                    if(wert == None):
+                        raise Exception("Bitte den wert festlegen")
                     if(interaction.guild.get_role(int(wert))):
                         await self.config.guild(interaction.guild).warnModRole.set(int(wert))
                         embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
@@ -420,7 +434,7 @@ class Modsystem(commands.Cog):
                                f"Statischer Punkteabbau Intervall: **{await self.config.guild(interaction.guild).warnResetTime()}**\n"
                                f"Nutze Channel für die Verwarnungen: **{await self.config.guild(interaction.guild).warnUseChannel()}**\n"
                                f"Nutze DM für die Verwarnungen: **{await self.config.guild(interaction.guild).warnUseDM()}**\n"
-                               f"Modrolle: **{interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole())}**\n\n"
+                               f"Modrolle: {interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).mention}\n\n"
                                f"**General:**\n"
                                f"Nutze generel Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n")
             await interaction.response.send_message(embed=embed)
@@ -449,6 +463,8 @@ class Modsystem(commands.Cog):
     @app_commands.checks.cooldown(1, 90)
     async def warn(self, interaction: discord.Interaction, user: discord.Member, reason: str, stufe: int = None):
         try:
+            if(await self.config.guild(interaction.guild).enableWarn() == False):
+                raise Exception("Die Funktion ist momentan nicht aktiviert")
             if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).warnModROle()).position):
                 raise Exception("Keine Berechtigung diesen Befehl zu nutzen")
             if(interaction.user.top_role.position < user.top_role.position):
