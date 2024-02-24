@@ -428,7 +428,7 @@ class Modsystem(commands.Cog):
                                f"Join-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\n"
                                f"Delete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n"
                                f"Voice-Log: **{await self.config.guild(interaction.guild).enableVoiceLog()}**\n\n"
-                               f"**Warn**\n"
+                               f"**Warn:**\n"
                                f"Warnpunke pro Warn: **{await self.config.guild(interaction.guild).warnWeight()}**\n"
                                f"Nötige Punkte zum Kicken: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
                                f"Nötige Punkte zum Bannen: **{await self.config.guild(interaction.guild).warnBanWeight()}**\n"
@@ -438,6 +438,9 @@ class Modsystem(commands.Cog):
                                f"Statischer Punkteabbau Intervall: **{await self.config.guild(interaction.guild).warnResetTime()}**\n"
                                f"Nutze Channel für die Verwarnungen: **{await self.config.guild(interaction.guild).warnUseChannel()}**\n"
                                f"Nutze DM für die Verwarnungen: **{await self.config.guild(interaction.guild).warnUseDM()}**\n"
+                               f"Stufe 1 Multiplikator: **{await self.config.guild(interaction.guild).warnFirstMultiplicator()}**\n"
+                               f"Stufe 2 Multiplikator: **{await self.config.guild(interaction.guild).warnSecondMultiplicator()}**\n"
+                               f"Stufe 3 Multiplikator: **{await self.config.guild(interaction.guild).warnThirdMultiplicator()}**\n"
                                f"Mindestrolle die Verwarnen kann: {interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).mention}\n\n"
                                f"**General:**\n"
                                f"Nutze den generellen Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n")
