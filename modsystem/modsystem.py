@@ -713,30 +713,46 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
-    @modsystem.command(name="showwuserwarnstats", description="Zeigt die aktuellen Daten für einen User an")
+    @modsystem.command(name="showwuserwarnstats", description="Zeigt die aktuellen Daten für einen User oder dich selbst an")
     @app_commands.describe(user="User")
-    async def showuserwarnstats(self, interaction: discord.Interaction, user: discord.User):
+    async def showuserwarnstats(self, interaction: discord.Interaction, user: discord.User = None):
         try:
-            if(interaction.user.top_role.positions < interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
+            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
                 if(interaction.user != user):
-                    raise Exception("Du darfst dir nur deine Eigenen Daten anschauen")
+                    if(user is not None):
+                        raise Exception("Du darfst dir nur deine Eigenen Daten anschauen")
             embed = discord.Embed(title=f"Hier sind die aktuellen Daten", color=0xfc7f03)
-            if(dict(await self.config.guild(interaction.guild).userWarns()).get(str(user.id)) is not None):
-                currentUserRecord = await self.config.guild(interaction.guild).userWarns.get_raw(user.id)
-                embed.description=(f"**Es ist aktuell folgendes von {user.mention} gespeichert:**\n\n"
-                                   f"Begründung des letzten Warns: **{currentUserRecord.get('currentReason')}**\n"
-                                   f"Aktuelle Punkte: **{currentUserRecord.get('currentPoints')}**\n"
-                                   f"Alle jemals erhaltene Punkte: **{currentUserRecord.get('totalPoints')}**\n"
-                                   f"Erster Warn am **{currentUserRecord.get('firstWarn')}** erhalten\n"
-                                   f"Letzter Warn am **{currentUserRecord.get('lastWarn')}** erhalten\n"
-                                   f"Anzahl an Kicks durch Warns: **{currentUserRecord.get('kickCount')}**\n"
-                                   f"User gebannt: **{currentUserRecord.get('banned')}**")
-                embed.set_thumbnail(url=user.display_avatar.url)
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+            if(user is None):
+                if(dict(await self.config.guild(interaction.guild).userWarns()).get(str(interaction.user.id)) is not None):
+                    currentUserRecord = await self.config.guild(interaction.guild).userWarns.get_raw(interaction.user.id)
+                    embed.description=(f"**Es ist aktuell folgendes von {interaction.user.mention} gespeichert:**\n\n"
+                                       f"Begründung des letzten Warns: **{currentUserRecord.get('currentReason')}**\n"
+                                       f"Aktuelle Punkte: **{currentUserRecord.get('currentPoints')}**\n"
+                                       f"Alle jemals erhaltene Punkte: **{currentUserRecord.get('totalPoints')}**\n"
+                                       f"Erster Warn am **{currentUserRecord.get('firstWarn')}** erhalten\n"
+                                       f"Letzter Warn am **{currentUserRecord.get('lastWarn')}** erhalten\n"
+                                       f"Anzahl an Kicks durch Warns: **{currentUserRecord.get('kickCount')}**\n"
+                                       f"User gebannt: **{currentUserRecord.get('banned')}**")
+                    embed.set_thumbnail(url=interaction.user.display_avatar.url)
+                else:
+                    embed.description=f"**Es liegen aktuell keine Daten zu {interaction.user.mention} vor**"
+                    embed.set_thumbnail(url=interaction.user.display_avatar.url)
             else:
-                embed.description=f"**Es liegen aktuell keine Daten zu {user.mention} vor**"
-                embed.set_thumbnail(url=user.display_avatar.url)
-                await interaction.response.send_message(embed=embed)
+                if(dict(await self.config.guild(interaction.guild).userWarns()).get(str(user.id)) is not None):
+                    currentUserRecord = await self.config.guild(interaction.guild).userWarns.get_raw(user.id)
+                    embed.description=(f"**Es ist aktuell folgendes von {user.mention} gespeichert:**\n\n"
+                                    f"Begründung des letzten Warns: **{currentUserRecord.get('currentReason')}**\n"
+                                    f"Aktuelle Punkte: **{currentUserRecord.get('currentPoints')}**\n"
+                                    f"Alle jemals erhaltene Punkte: **{currentUserRecord.get('totalPoints')}**\n"
+                                    f"Erster Warn am **{currentUserRecord.get('firstWarn')}** erhalten\n"
+                                    f"Letzter Warn am **{currentUserRecord.get('lastWarn')}** erhalten\n"
+                                    f"Anzahl an Kicks durch Warns: **{currentUserRecord.get('kickCount')}**\n"
+                                    f"User gebannt: **{currentUserRecord.get('banned')}**")
+                    embed.set_thumbnail(url=user.display_avatar.url)
+                else:
+                    embed.description=f"**Es liegen aktuell keine Daten zu {user.mention} vor**"
+                    embed.set_thumbnail(url=user.display_avatar.url)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
@@ -764,6 +780,56 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embed)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
+    @modsystem.command(name="help", description="Hilfe zu allen Commands")
+    async def help(self, interaction: discord.Interaction):
+        try:
+            embed = discord.Embed(color=0xfc7f03)
+            if(app_commands.checks.has_permissions(administrator=True)):
+                embed.description=(f"# Hilfemenü\n"
+                                   f"### Generelle Befehle\n"
+                                   f"* **/modlog showwarnlist**\n"
+                                   f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
+                                   f"* **/modlog showuserwarnstats [user]**\n"
+                                   f" * Zeigt deine aktuellen Warndaten an oder lass dir die von andern anzeigen\n"
+                                   f"* **/warn <user> <reason> [stufe]**\n"
+                                   f" * Verwarne den angegebenen User\n"
+                                   f"### Setup\n"
+                                   f"* **/modlog setupchannel <Modul> <ChannelID>**\n"
+                                   f" * Setze die zu benutzenden Channel für das ausgewählte Modul\n"
+                                   f"* **/modlog enable <Modul> <True/False>**\n"
+                                   f" * Aktiviere oder deaktiviere das ausgewählte Modul\n"
+                                   f"* **/modlog setupwarn <Setting> <bool/int>**\n"
+                                   f" * Konfiguriere das Warn-Modul und setze die Werte für die entsprechenden Settings\n"
+                                   f"### Misc\n"
+                                   f"* **/modlog setwarnpoints <user> <points>**\n"
+                                   f" * Setze für den Angegebenen User die aktuellen Warnpunkte\n"
+                                   f"* **/modlog updateinvitecodes**\n"
+                                   f" * Update die gespeicherten Invite-Codes falls es Probleme mit dem Joinlog gibt\n"
+                                   f"* **/modlog getconfig**\n"
+                                   f" * Zeige die Aktuelle Konfiguration")
+            elif(interaction.user.top_role.position > interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
+                embed.description=(f"# Hilfemenü\n"
+                                   f"### Generelle Befehle\n"
+                                   f"* **/modlog showwarnlist**\n"
+                                   f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
+                                   f"* **/modlog showuserwarnstats [user]**\n"
+                                   f" * Zeigt deine aktuellen Warndaten an oder lass dir die von andern anzeigen\n"
+                                   f"* **/warn <user> <reason> [stufe]**\n"
+                                   f" * Verwarne den angegebenen User")
+            else:
+                embed.description=(f"# Hilfemenü\n"
+                                   f"### Generelle Befehle:\n"
+                                   f"* **/modlog showwarnlist**\n"
+                                   f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
+                                   f"* **/modlog showuserwarnstats**\n"
+                                   f" * Zeigt deine aktuellen Warndaten an\n")
+            embed.set_footer(text=f"Das Serverteam von {interaction.guild.name}", icon_url=interaction.guild.icon.url)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry):
