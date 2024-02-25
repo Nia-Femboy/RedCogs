@@ -247,7 +247,7 @@ class Modsystem(commands.Cog):
                             embedSuccess.add_field(name="DeleteMessageLog", value=status)
                         elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).deleteMessageLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
                             await self.config.guild(interaction.guild).enableDeleteMessageLog.set(status)
-                            embedSuccess.add_field(name="Client-Update Log", value=status)
+                            embedSuccess.add_field(name="Message Log", value=status)
                         elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGeneralLogChannel()):
                             raise Exception("Kein Gültiger genereller Channel definiert")
                         elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).deleteMessageLogChannel())) is None):
