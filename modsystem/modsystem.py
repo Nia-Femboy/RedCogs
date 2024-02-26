@@ -474,8 +474,8 @@ class Modsystem(commands.Cog):
                 raise Exception("Die Funktion ist momentan nicht aktiviert")
             if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
                 raise Exception("Keine Berechtigung diesen Befehl zu nutzen")
-            if(interaction.user.top_role.position < user.top_role.position):
-                raise Exception("Du kannst keine Leute verwarnen die einen höheren Rang haben als du")
+            if(interaction.user.top_role.position <= user.top_role.position):
+                raise Exception("Du kannst keine Leute verwarnen die einen höheren oder gleichwertigen Rang haben wie du")
             if(user.bot):
                 raise Exception("Du kannst keinen Bot verwarnen")
             embed = discord.Embed(title="Aktion Erfolgreich", color=0x0ffc03)
@@ -725,6 +725,7 @@ class Modsystem(commands.Cog):
             if(user is None):
                 if(dict(await self.config.guild(interaction.guild).userWarns()).get(str(interaction.user.id)) is not None):
                     currentUserRecord = await self.config.guild(interaction.guild).userWarns.get_raw(interaction.user.id)
+                    ban = "Ja" if currentUserRecord.get("banned") == True else "Nein"
                     embed.description=(f"**Es ist aktuell folgendes von {interaction.user.mention} gespeichert:**\n\n"
                                        f"Begründung des letzten Warns: **{currentUserRecord.get('currentReason')}**\n"
                                        f"Aktuelle Punkte: **{currentUserRecord.get('currentPoints')}**\n"
@@ -732,7 +733,7 @@ class Modsystem(commands.Cog):
                                        f"Erster Warn am **{currentUserRecord.get('firstWarn')}** erhalten\n"
                                        f"Letzter Warn am **{currentUserRecord.get('lastWarn')}** erhalten\n"
                                        f"Anzahl an Kicks durch Warns: **{currentUserRecord.get('kickCount')}**\n"
-                                       f"User gebannt: **{currentUserRecord.get('banned')}**")
+                                       f"User gebannt: **{ban}**")
                     embed.set_thumbnail(url=interaction.user.display_avatar.url)
                 else:
                     embed.description=f"**Es liegen aktuell keine Daten zu {interaction.user.mention} vor**"
@@ -740,6 +741,7 @@ class Modsystem(commands.Cog):
             else:
                 if(dict(await self.config.guild(interaction.guild).userWarns()).get(str(user.id)) is not None):
                     currentUserRecord = await self.config.guild(interaction.guild).userWarns.get_raw(user.id)
+                    ban = "Ja" if currentUserRecord.get("banned") == True else "Nein"
                     embed.description=(f"**Es ist aktuell folgendes von {user.mention} gespeichert:**\n\n"
                                     f"Begründung des letzten Warns: **{currentUserRecord.get('currentReason')}**\n"
                                     f"Aktuelle Punkte: **{currentUserRecord.get('currentPoints')}**\n"
@@ -747,7 +749,7 @@ class Modsystem(commands.Cog):
                                     f"Erster Warn am **{currentUserRecord.get('firstWarn')}** erhalten\n"
                                     f"Letzter Warn am **{currentUserRecord.get('lastWarn')}** erhalten\n"
                                     f"Anzahl an Kicks durch Warns: **{currentUserRecord.get('kickCount')}**\n"
-                                    f"User gebannt: **{currentUserRecord.get('banned')}**")
+                                    f"User gebannt: **{ban}**")
                     embed.set_thumbnail(url=user.display_avatar.url)
                 else:
                     embed.description=f"**Es liegen aktuell keine Daten zu {user.mention} vor**"
@@ -765,19 +767,21 @@ class Modsystem(commands.Cog):
                 raise Exception("Du hast keine Berechtigungen diesen Befehl auszuführen")
             embed = discord.Embed(title="Alle aktuellen Verwarnungen", color=0xfc7f03)
             listString = ""
+            embedList = []
             for index, userID in enumerate(dict(await self.config.guild(interaction.guild).userWarns()), start=1):
-                if index % 4 == 0:
-                    embed.description=listString
-                    await interaction.channel.send(embed=embed)
-                    listString = ""
                 listString += (f"{interaction.guild.get_member(int(userID)).mention}\n\n"
                                f"Username: **{interaction.guild.get_member(int(userID)).name}**\n"
                                f"Aktuelle Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'currentPoints')}**\n"
                                f"Gesamte Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'totalPoints')}**\n"
                                f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'kickCount')}**\n"
                                f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'currentPoints')}**\n\n\n")
+                if index % 3 == 0:
+                    embed.description=listString
+                    listString = ""
+                    embedList.append(embed.copy())
             embed.description = listString
-            await interaction.response.send_message(embed=embed)
+            embedList.append(embed.copy())
+            await interaction.response.send_message(embeds=embedList, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
@@ -1023,7 +1027,8 @@ class Modsystem(commands.Cog):
             for guild in self.bot.guilds:
                 if(await self.config.guild(guild).warnDynamicReset()):
                     for userWarn in await self.config.guild(guild).userWarns():
-                        await self.config.guild(guild).userWarns.set_raw(userWarn, 'currentPoints', value=await self.config.guild(guild).userWarns.get_raw(userWarn, 'currentPoints') - await self.config.guild(guild).warnDynamicResetCount())
+                        if(await self.config.guild(guild).userWarns.get_raw(userWarn, 'currentPoints') > 0):
+                            await self.config.guild(guild).userWarns.set_raw(userWarn, 'currentPoints', value=await self.config.guild(guild).userWarns.get_raw(userWarn, 'currentPoints') - await self.config.guild(guild).warnDynamicResetCount())
                 else:
                     for userWarn in await self.config.guild(guild).userWarns():
                         await self.config.guild(guild).userWarns.set_raw(userWarn, 'currentPoints', value=0)
