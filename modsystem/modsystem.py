@@ -1,4 +1,5 @@
 import discord
+import re
 
 from discord.utils import MISSING
 from discord.ext import tasks
@@ -44,6 +45,8 @@ class Modsystem(commands.Cog):
             warnFirstMultiplicator=1,
             warnSecondMultiplicator=1,
             warnThirdMultiplicator=1,
+            softBanChannel=0,
+            deleteLinks=False,
             userWarns={},
             userInvites={}
         )
@@ -59,7 +62,8 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Ban Logchannel", value="bChannel"),
         app_commands.Choice(name="Update Logchannel", value="uChannel"),
         app_commands.Choice(name="Join Logchannel", value="jChannel"),
-        app_commands.Choice(name="Message Logchannel", value="mChannel")
+        app_commands.Choice(name="Message Logchannel", value="mChannel"),
+        app_commands.Choice(name="Softban Channel", value="sChannel")
     ])
     @app_commands.checks.has_permissions(administrator=True)
     async def setup(self, interaction: discord.Interaction, choice: app_commands.Choice[str], channelid: str):
@@ -105,6 +109,11 @@ class Modsystem(commands.Cog):
                     await self.config.guild(interaction.guild).deleteMessageLogChannel.set(int(channelid))
                     embedSuccess.add_field(name="Delete Message Log Channel", value=channelid)
 
+                case "sChannel":
+
+                    await self.config.guild(interaction.guild).softBanChannel.set(int(channelid))
+                    embedSuccess.add_field(name="Softban Channel", value=channelid)
+
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
 
@@ -122,7 +131,8 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Updatelog", value="uLog"),
         app_commands.Choice(name="Joinlog", value="jLog"),
         app_commands.Choice(name="Messagelog", value="mLog"),
-        app_commands.Choice(name="Voicelog", value="vLog")
+        app_commands.Choice(name="Voicelog", value="vLog"),
+        app_commands.Choice(name="Message Link Detection", value="mLinks")
     ])
     @app_commands.checks.has_permissions(administrator=True)
     async def enable(self, interaction: discord.Interaction, choice: app_commands.Choice[str], status: bool):
@@ -260,6 +270,11 @@ class Modsystem(commands.Cog):
 
                     await self.config.guild(interaction.guild).enableVoiceLog.set(status)
                     embedSuccess.add_field(name="Voice Log", value=status)
+
+                case "mLinks":
+
+                    await self.config.guild(interaction.guild).deleteLinks.set(status)
+                    embedSuccess.add_field(name="Message Link Detection", value=status)
 
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
@@ -419,7 +434,8 @@ class Modsystem(commands.Cog):
                                f"Ban Log-Channel: <#{await self.config.guild(interaction.guild).banLogChannel()}>\n"
                                f"Update Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\n"
                                f"Join Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\n"
-                               f"Delete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n\n"
+                               f"Delete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n"
+                               f"Softban Channel: <#{await self.config.guild(interaction.guild).softBanChannel()}>\n\n"
                                f"**Status:**\n"
                                f"Warn funktion  aktiviert: **{await self.config.guild(interaction.guild).enableWarn()}**\n"
                                f"Kick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\n"
@@ -526,7 +542,7 @@ class Modsystem(commands.Cog):
                                              f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**")
                     else:
                         if(await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'banned')):
-                            raise Exception("Warn nicht möglich da der User bereits gebant ist")
+                            raise Exception("Warn nicht möglich da der User bereits gebannt ist")
                         currentPoints = await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints') + await self.config.guild(interaction.guild).warnWeight() * multiplikator
                         totalPoints = await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'totalPoints') + await self.config.guild(interaction.guild).warnWeight() * multiplikator
                         if(currentPoints < await self.config.guild(interaction.guild).warnKickWeight() or (await self.config.guild(interaction.guild).warnKickWeight() < currentPoints < await self.config.guild(interaction.guild).warnBanWeight())):
@@ -786,6 +802,47 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
+    # @modsystem.command(name="softban", description="Softbanne einen User")
+    # @app_commands.describe(user="Der User der einen Softban bekommen soll")
+    # async def softban(self, interaction: discord.Interaction, user: discord.User):
+    #     try:
+    #     except Exception as error:
+    #         embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+    #         await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
+    # @modsystem.command(name="unsban", description="Nimmt den Softban wieder zurück")
+    # @app_commands.describe(user="Der User bei dem der Softban wieder zurück genommen werden soll")
+    # async def unban(self, interaction: discord.Interaction, user: discord.User):
+    #     try:
+    #     except Exception as error:
+    #         embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+    #         await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            
+    @app_commands.command()
+    @app_commands.describe()
+    async def kick(self, interaction: discord.Interaction, user: discord.Member, reason: str):
+        try:
+            if(interaction.user.top_role.position < interaction.guild.get_role(int(await self.config.guild(interaction.guild).warnModRole()))):
+                user.kick(reason=reason)
+                embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
+                await interaction.response.send_message(embed=embedLog, ephemeral=True)
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            
+    @app_commands.command()
+    @app_commands.describe()
+    async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str):
+        try:
+            if(interaction.user.top_role.position <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).warnModRole()))):
+                raise Exception("Keine Berechtigung")
+            user.ban(reason=reason, delete_message_days=1)
+            embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
+            await interaction.response.send_message(embed=embedLog, ephemeral=True)
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
     @modsystem.command(name="help", description="Hilfe zu allen Commands")
     async def help(self, interaction: discord.Interaction):
         try:
@@ -799,6 +856,10 @@ class Modsystem(commands.Cog):
                                    f" * Zeigt deine aktuellen Warndaten an oder lass dir die von andern anzeigen\n"
                                    f"* **/warn <user> <reason> [stufe]**\n"
                                    f" * Verwarne den angegebenen User\n"
+                                   f"* **/softban <user>**\n"
+                                   f" * Erteile dem User einen Softban\n"
+                                   f"* **/unban <user>**\n"
+                                   f" * Nimm den Softban von dem User wieder zurück\n"
                                    f"### Setup\n"
                                    f"* **/modlog setupchannel <Modul> <ChannelID>**\n"
                                    f" * Setze die zu benutzenden Channel für das ausgewählte Modul\n"
@@ -821,7 +882,11 @@ class Modsystem(commands.Cog):
                                    f"* **/modlog showuserwarnstats [user]**\n"
                                    f" * Zeigt deine aktuellen Warndaten an oder lass dir die von andern anzeigen\n"
                                    f"* **/warn <user> <reason> [stufe]**\n"
-                                   f" * Verwarne den angegebenen User")
+                                   f" * Verwarne den angegebenen User\n"
+                                   f"* **/softban <user>**\n"
+                                   f" * Erteile dem User einen Softban\n"
+                                   f"* **/unban <user>**\n"
+                                   f" * Nimm den Softban von dem User wieder zurück")
             else:
                 embed.description=(f"# Hilfemenü\n"
                                    f"### Generelle Befehle:\n"
@@ -1019,7 +1084,7 @@ class Modsystem(commands.Cog):
             if(dict(await self.config.guild(guild).userWarns()).get(str(user.id)) is not None):
                 await self.config.guild(guild).userWarns.set_raw(user.id, 'banned', value=False)
         except Exception as error:
-            print("Fehler bei Member-Unban: " + error)
+            print("Fehler bei Member-Unban: " + str(error))
 
     @tasks.loop(minutes=5)
     async def remove_warn_points(self):
@@ -1033,7 +1098,7 @@ class Modsystem(commands.Cog):
                     for userWarn in await self.config.guild(guild).userWarns():
                         await self.config.guild(guild).userWarns.set_raw(userWarn, 'currentPoints', value=0)
         except Exception as error:
-            print("Fehler bei Scheduled-Task: " + error)
+            print("Fehler bei Scheduled-Task: " + str(error))
 
     async def cog_load(self):
         try:
@@ -1045,13 +1110,13 @@ class Modsystem(commands.Cog):
                     else:
                         Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(guild).warnResetTime())
         except Exception as error:
-            print("Fehler in cog_load: " + error)
+            print("Fehler in cog_load: " + str(error))
 
     async def cog_unload(self):
         try:
             Modsystem.remove_warn_points.cancel()
         except Exception as error:
-            print("Fehler in cog_unload: " + error)
+            print("Fehler in cog_unload: " + str(error))
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -1064,4 +1129,15 @@ class Modsystem(commands.Cog):
                     else:
                         Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(guild).warnResetTime())
         except Exception as error:
-            print("Fehler in cog_load: " + error)
+            print("Fehler in cog_ready: " + str(error))
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        try:
+            if(await self.config.guild(message.guild).deleteLinks()):
+                if(re.findall(r"https?:\/\/.*\..{2,}", message.content) != []):
+                    embedLog.description=f"Links sind auf **{message.guild.name}** verboten"
+                    await message.author.send(embed=embedLog)
+                    await message.delete()
+        except Exception as error:
+            print("Fehler in on_message: " + str(error))
