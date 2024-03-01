@@ -36,7 +36,7 @@ class EventMessages(commands.Cog):
                 print()
             except Exception as error:
                 embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
-                interaction.response.send_message(embed=embedFailure, ephemeral=True)
+                await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
         @commands.Cog.listener()
         async def on_member_join(self, member):
