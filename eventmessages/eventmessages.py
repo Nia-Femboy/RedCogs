@@ -24,14 +24,14 @@ class EventMessages(commands.Cog):
         eventmessages = app_commands.Group(name="eventmessage", description="Lasse dir Nachrichten für Events ausgeben")
 
         @eventmessages.command(name="setup", description="Einrichten der Nachrichten")
-        @app_commands.describe(type="Die zu setzende Einstelleung", welcome="Konfiguriere die Willkommensnachrichten")
+        @app_commands.describe(type="Die zu setzende Einstellung", welcome="Konfiguriere die Willkommensnachrichten")
         @app_commands.choices(type=[
             app_commands.Choice(name="Willkommensnachricht", value="wMessage"),
             app_commands.Choice(name="Nachricht beim verlassen", value="gbNessage"),
             app_commands.Choice(name="Willkommensnachricht Channel", value="wMessageChannel")
         ])
         @app_commands.checks.has_permissions(administrator=True)
-        async def setup(self, interaction: discord.Interaction, type: app_commands.Choice, value: str):
+        async def setup(self, interaction: discord.Interaction, type: app_commands.Choice[str], value: str):
             try:
                 print()
             except Exception as error:
