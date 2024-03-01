@@ -1,0 +1,17 @@
+{
+    "author": [
+        "Nia"
+    ],
+    "install_msg": "EventMessages wurde erfolgreich installiert",
+    "name": "EventMessages",
+    "short": "Mit diesem Cog ist es möglich Nachrichten für Events zu generieren",
+    "description": "Es ist möglich Nachrichten beim Joinen oder Leaven auszugeben sowie wenn jemand gebannt oder gekickt wurde einen TimeOut oder einen Rang geändert wurde",
+    "tags": [
+        "event",
+        "messages",
+        "auto"
+    ],
+    "requirements": [
+        "discord"
+    ]
+}
