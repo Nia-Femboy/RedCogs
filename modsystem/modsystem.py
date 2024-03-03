@@ -526,8 +526,8 @@ class Modsystem(commands.Cog):
                         await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'displayName': user.display_name,
                                                                                                      'username': user.name,
                                                                                                      'currentReason': reason,
-                                                                                                     'currentPoints': await self.config.guild(interaction.guild).warnWeight() * multiplikator,
-                                                                                                     'totalPoints': await self.config.guild(interaction.guild).warnWeight() * multiplikator,
+                                                                                                     'currentPoints': round(await self.config.guild(interaction.guild).warnWeight() * multiplikator),
+                                                                                                     'totalPoints': round(await self.config.guild(interaction.guild).warnWeight() * multiplikator),
                                                                                                      'firstWarn': currentTime,
                                                                                                      'lastWarn': currentTime,
                                                                                                      'kickCount': 0,
@@ -785,12 +785,22 @@ class Modsystem(commands.Cog):
             listString = ""
             embedList = []
             for index, userID in enumerate(dict(await self.config.guild(interaction.guild).userWarns()), start=1):
-                listString += (f"{interaction.guild.get_member(int(userID)).mention}\n\n"
+                if(interaction.guild.get_member(userID) is None):
+                    listString += (f"{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'displayName')}\n\n"
                                f"Username: **{interaction.guild.get_member(int(userID)).name}**\n"
                                f"Aktuelle Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'currentPoints')}**\n"
                                f"Gesamte Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'totalPoints')}**\n"
-                               f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'kickCount')}**\n"
-                               f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'currentPoints')}**\n\n\n")
+                               f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'kickCount')}**\n")
+                else:
+                    listString += (f"{interaction.guild.get_member(int(userID)).mention}\n\n"
+                                f"Username: **{interaction.guild.get_member(int(userID)).name}**\n"
+                                f"Aktuelle Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'currentPoints')}**\n"
+                                f"Gesamte Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'totalPoints')}**\n"
+                                f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'kickCount')}**\n")
+                if(await self.config.guild(interaction.guild).userWWarns.get_raw(userID, 'banned') == False):
+                    listString += f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'currentPoints')}**\n\n\n"
+                else:
+                    listString += f"**User ist gebannt**\n\n\n"
                 if index % 3 == 0:
                     embed.description=listString
                     listString = ""
@@ -820,6 +830,7 @@ class Modsystem(commands.Cog):
             
     @app_commands.command()
     @app_commands.describe()
+    @app_commands.checks.has_permissions(administrator=True)
     async def kick(self, interaction: discord.Interaction, user: discord.Member, reason: str):
         try:
             if(interaction.user.top_role.position < interaction.guild.get_role(int(await self.config.guild(interaction.guild).warnModRole()))):
@@ -832,6 +843,7 @@ class Modsystem(commands.Cog):
             
     @app_commands.command()
     @app_commands.describe()
+    @app_commands.checks.has_permissions(administrator=True)
     async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str):
         try:
             if(interaction.user.top_role.position <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).warnModRole()))):
