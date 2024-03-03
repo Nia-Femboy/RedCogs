@@ -785,7 +785,7 @@ class Modsystem(commands.Cog):
             listString = ""
             embedList = []
             for index, userID in enumerate(dict(await self.config.guild(interaction.guild).userWarns()), start=1):
-                if(interaction.guild.get_member(userID) is None):
+                if(interaction.guild.get_member(int(userID)) is None):
                     listString += (f"{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'displayName')}\n\n"
                                f"Username: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'username')}**\n"
                                f"Aktuelle Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'currentPoints')}**\n"
