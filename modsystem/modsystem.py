@@ -1,11 +1,15 @@
 import discord
 import re
+import requests
+import os
+import io
 
 from discord.utils import MISSING
 from discord.ext import tasks
 
 from redbot.core import commands, app_commands, Config
 from datetime import datetime, timedelta, timezone
+from PIL import Image
 
 embedSuccess = discord.Embed(title="Erfolgreich", description="Es wurden folgende Werte gesetzt:", color=0x0ffc03)
 embedFailure = discord.Embed(title="Fehler", color=0xff0000)
@@ -47,6 +51,8 @@ class Modsystem(commands.Cog):
             warnThirdMultiplicator=1,
             softBanChannel=0,
             deleteLinks=False,
+            linkPattern=r"https?:\/\/.*\..{2,}",
+            saveDeletedPics=False,
             userWarns={},
             userInvites={}
         )
@@ -132,7 +138,8 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Joinlog", value="jLog"),
         app_commands.Choice(name="Messagelog", value="mLog"),
         app_commands.Choice(name="Voicelog", value="vLog"),
-        app_commands.Choice(name="Message Link Detection", value="mLinks")
+        app_commands.Choice(name="Message Link Detection", value="mLinks"),
+        app_commands.Choice(name="Speichere gelöschte Bilder lokal", value="sdPics")
     ])
     @app_commands.checks.has_permissions(administrator=True)
     async def enable(self, interaction: discord.Interaction, choice: app_commands.Choice[str], status: bool):
@@ -275,6 +282,11 @@ class Modsystem(commands.Cog):
 
                     await self.config.guild(interaction.guild).deleteLinks.set(status)
                     embedSuccess.add_field(name="Message Link Detection", value=status)
+
+                case "sdPics":
+
+                    await self.config.guild(interaction.guild).saveDeletedPics.set(status)
+                    embedSuccess.add_field(name="Speichere gelöschte Bilder lokal", value=status)
 
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
@@ -426,8 +438,9 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def showconfig(self, interaction: discord.Interaction):
         try:
-            embed = discord.Embed(title="Config", color=0x0ffc03)
-            embed.description=(f"**Channel:**\n"
+            embed = discord.Embed(color=0x0ffc03)
+            embed.description=(f"# Config\n"
+                               f"### Channel:\n"
                                f"Gneral Log-Channel: <#{await self.config.guild(interaction.guild).generalLogChannel()}>\n"
                                f"Warn Log-Channel: <#{await self.config.guild(interaction.guild).warnLogChannel()}>\n"
                                f"Kick Log-Channel: <#{await self.config.guild(interaction.guild).kickLogChannel()}>\n"
@@ -435,16 +448,18 @@ class Modsystem(commands.Cog):
                                f"Update Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\n"
                                f"Join Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\n"
                                f"Delete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n"
-                               f"Softban Channel: <#{await self.config.guild(interaction.guild).softBanChannel()}>\n\n"
-                               f"**Status:**\n"
+                               f"Softban Channel: <#{await self.config.guild(interaction.guild).softBanChannel()}>\n"
+                               f"### Status:\n"
                                f"Warn funktion  aktiviert: **{await self.config.guild(interaction.guild).enableWarn()}**\n"
                                f"Kick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\n"
                                f"Ban-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\n"
                                f"Update-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\n"
                                f"Join-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\n"
                                f"Delete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n"
-                               f"Voice-Log: **{await self.config.guild(interaction.guild).enableVoiceLog()}**\n\n"
-                               f"**Warn:**\n"
+                               f"Voice-Log: **{await self.config.guild(interaction.guild).enableVoiceLog()}**\n"
+                               f"Verhindere Links: **{await self.config.guild(interaction.guild).deleteLinks()}**\n"
+                               f"Speichere gelöschte Bilder: **{await self.config.guild(interaction.guild).saveDeletedPics()}**\n"
+                               f"### Warn:\n"
                                f"Warnpunke pro Warn: **{await self.config.guild(interaction.guild).warnWeight()}**\n"
                                f"Nötige Punkte zum Kicken: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
                                f"Nötige Punkte zum Bannen: **{await self.config.guild(interaction.guild).warnBanWeight()}**\n"
@@ -457,9 +472,11 @@ class Modsystem(commands.Cog):
                                f"Stufe 1 Multiplikator: **{await self.config.guild(interaction.guild).warnFirstMultiplicator()}**\n"
                                f"Stufe 2 Multiplikator: **{await self.config.guild(interaction.guild).warnSecondMultiplicator()}**\n"
                                f"Stufe 3 Multiplikator: **{await self.config.guild(interaction.guild).warnThirdMultiplicator()}**\n"
-                               f"Mindestrolle die Verwarnen kann: {interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).mention}\n\n"
-                               f"**General:**\n"
-                               f"Nutze den generellen Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n")
+                               f"Mindestrolle die Verwarnen kann: {interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).mention}\n"
+                               f"### General:\n"
+                               f"Nutze den generellen Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n"
+                               f"### Misc:\n"
+                               f"Link detection pattern: **{await self.config.guild(interaction.guild).linkPattern()}**\n")
             await interaction.response.send_message(embed=embed)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
@@ -859,53 +876,40 @@ class Modsystem(commands.Cog):
     async def help(self, interaction: discord.Interaction):
         try:
             embed = discord.Embed(color=0xfc7f03)
-            if(app_commands.checks.has_permissions(administrator=True)):
-                embed.description=(f"# Hilfemenü\n"
-                                   f"### Generelle Befehle\n"
-                                   f"* **/modlog showwarnlist**\n"
-                                   f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
-                                   f"* **/modlog showuserwarnstats [user]**\n"
-                                   f" * Zeigt deine aktuellen Warndaten an oder lass dir die von andern anzeigen\n"
-                                   f"* **/warn <user> <reason> [stufe]**\n"
-                                   f" * Verwarne den angegebenen User\n"
-                                   f"* **/softban <user>**\n"
-                                   f" * Erteile dem User einen Softban\n"
-                                   f"* **/unban <user>**\n"
-                                   f" * Nimm den Softban von dem User wieder zurück\n"
-                                   f"### Setup\n"
-                                   f"* **/modlog setupchannel <Modul> <ChannelID>**\n"
-                                   f" * Setze die zu benutzenden Channel für das ausgewählte Modul\n"
-                                   f"* **/modlog enable <Modul> <True/False>**\n"
-                                   f" * Aktiviere oder deaktiviere das ausgewählte Modul\n"
-                                   f"* **/modlog setupwarn <Setting> <bool/int>**\n"
-                                   f" * Konfiguriere das Warn-Modul und setze die Werte für die entsprechenden Settings\n"
-                                   f"### Misc\n"
-                                   f"* **/modlog setwarnpoints <user> <points>**\n"
-                                   f" * Setze für den Angegebenen User die aktuellen Warnpunkte\n"
-                                   f"* **/modlog updateinvitecodes**\n"
-                                   f" * Update die gespeicherten Invite-Codes falls es Probleme mit dem Joinlog gibt\n"
-                                   f"* **/modlog getconfig**\n"
-                                   f" * Zeige die Aktuelle Konfiguration")
-            elif(interaction.user.top_role.position > interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
-                embed.description=(f"# Hilfemenü\n"
-                                   f"### Generelle Befehle\n"
-                                   f"* **/modlog showwarnlist**\n"
-                                   f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
-                                   f"* **/modlog showuserwarnstats [user]**\n"
-                                   f" * Zeigt deine aktuellen Warndaten an oder lass dir die von andern anzeigen\n"
-                                   f"* **/warn <user> <reason> [stufe]**\n"
-                                   f" * Verwarne den angegebenen User\n"
-                                   f"* **/softban <user>**\n"
-                                   f" * Erteile dem User einen Softban\n"
-                                   f"* **/unban <user>**\n"
-                                   f" * Nimm den Softban von dem User wieder zurück")
-            else:
-                embed.description=(f"# Hilfemenü\n"
+            embed.description=(f"# Hilfemenü\n"
                                    f"### Generelle Befehle:\n"
                                    f"* **/modlog showwarnlist**\n"
                                    f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
                                    f"* **/modlog showuserwarnstats**\n"
                                    f" * Zeigt deine aktuellen Warndaten an\n")
+            if(interaction.user.top_role.position > interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
+                embed.description=(f"# Hilfemenü\n"
+                                   f"### Generelle Befehle\n"
+                                   f"* **/modlog showwarnlist**\n"
+                                   f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
+                                   f"* **/modlog showuserwarnstats [user]**\n"
+                                   f" * Zeigt deine aktuellen Warndaten an oder lass dir die von andern anzeigen\n"
+                                   f"* **/warn <user> <reason> [stufe]**\n"
+                                   f" * Verwarne den angegebenen User\n"
+                                   f"* **/softban <user>**\n"
+                                   f" * Erteile dem User einen Softban\n"
+                                   f"* **/unban <user>**\n"
+                                   f" * Nimm den Softban von dem User wieder zurück\n")
+                if(app_commands.checks.has_permissions(administrator=True)):
+                    embed.description += (f"### Setup\n"
+                                    f"* **/modlog setupchannel <Modul> <ChannelID>**\n"
+                                    f" * Setze die zu benutzenden Channel für das ausgewählte Modul\n"
+                                    f"* **/modlog enable <Modul> <True/False>**\n"
+                                    f" * Aktiviere oder deaktiviere das ausgewählte Modul\n"
+                                    f"* **/modlog setupwarn <Setting> <bool/int>**\n"
+                                    f" * Konfiguriere das Warn-Modul und setze die Werte für die entsprechenden Settings\n"
+                                    f"### Misc\n"
+                                    f"* **/modlog setwarnpoints <user> <points>**\n"
+                                    f" * Setze für den Angegebenen User die aktuellen Warnpunkte\n"
+                                    f"* **/modlog updateinvitecodes**\n"
+                                    f" * Update die gespeicherten Invite-Codes falls es Probleme mit dem Joinlog gibt\n"
+                                    f"* **/modlog getconfig**\n"
+                                    f" * Zeige die Aktuelle Konfiguration")
             embed.set_footer(text=f"Das Serverteam von {interaction.guild.name}", icon_url=interaction.guild.icon.url)
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
@@ -1047,12 +1051,17 @@ class Modsystem(commands.Cog):
                     embedString=(f"**{word} aus <#{data.channel_id}> gelöscht**\n\n"
                                 f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
                                 f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
-                #pic = io.BytesIO(await data.cached_message.attachments[0].read(use_cached=True))
-                #await channel.send(file=discord.File(pic, 'image.png'))
                     embedLog.description=embedString
                     await channel.send(embed=embedLog)
                     for pic in data.cached_message.attachments:
-                        await channel.send(pic)
+                        ftype = pic.url.split('/')[-1].split('?')[0]
+                        format = ftype.split('.')[-1]
+                        lfile = io.BytesIO(requests.get(pic.url).content)
+                        if(await self.config.guild(self.bot.get_guild(data.guild_id)).saveDeletedPics()):
+                            path = os.path.dirname(__file__)
+                            Image.open(lfile).save(f"{path}\\deleted_pics\\{ftype.split('.')[0]}-{datetime.now().strftime('%d-%m-%Y-%H-%M-%S')}.{format}")
+                            lfile.seek(0)
+                        await channel.send(file=discord.File(fp=lfile, filename=f"{ftype}"))
                 else:
                     if(len(data.cached_message.embeds) > 1):
                         word = "Folgende Embeds wurden"
@@ -1104,11 +1113,12 @@ class Modsystem(commands.Cog):
             for guild in self.bot.guilds:
                 if(await self.config.guild(guild).warnDynamicReset()):
                     for userWarn in await self.config.guild(guild).userWarns():
-                        if(await self.config.guild(guild).userWarns.get_raw(userWarn, 'currentPoints') > 0):
+                        if(await self.config.guild(guild).userWarns.get_raw(userWarn, 'currentPoints') > 0 and guild.get_member(userWarn) is not None):
                             await self.config.guild(guild).userWarns.set_raw(userWarn, 'currentPoints', value=await self.config.guild(guild).userWarns.get_raw(userWarn, 'currentPoints') - await self.config.guild(guild).warnDynamicResetCount())
                 else:
                     for userWarn in await self.config.guild(guild).userWarns():
-                        await self.config.guild(guild).userWarns.set_raw(userWarn, 'currentPoints', value=0)
+                        if(guild.get_member(userWarn) is not None):
+                            await self.config.guild(guild).userWarns.set_raw(userWarn, 'currentPoints', value=0)
         except Exception as error:
             print("Fehler bei Scheduled-Task: " + str(error))
 
@@ -1147,7 +1157,7 @@ class Modsystem(commands.Cog):
     async def on_message(self, message):
         try:
             if(await self.config.guild(message.guild).deleteLinks()):
-                if(re.findall(r"https?:\/\/.*\..{2,}", message.content) != []):
+                if(re.findall(await self.config.guild(message.guild).linkPattern(), message.content) != []):
                     embedLog.description=f"Links sind auf **{message.guild.name}** verboten"
                     await message.author.send(embed=embedLog)
                     await message.delete()

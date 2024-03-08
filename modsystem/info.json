@@ -13,6 +13,7 @@
     ],
     "requirements": [
         "discord",
-        "mcrcon"
+        "requests",
+        "pillow"
     ]
 }
