@@ -85,37 +85,37 @@ class Modsystem(commands.Cog):
                 case "gChannel":
 
                     await self.config.guild(interaction.guild).generalLogChannel.set(channel.id)
-                    embedSuccess.add_field(name="General Log Channel", value=channel)
+                    embedSuccess.add_field(name="General Log Channel", value=f"<#{channel.id}>")
 
                 case "wChannel":
 
                     await self.config.guild(interaction.guild).warnLogChannel.set(channel.id)
-                    embedSuccess.add_field(name="Warning Log Channel", value=channel)
+                    embedSuccess.add_field(name="Warning Log Channel", value=f"<#{channel.id}>")
 
                 case "kChannel":
 
                     await self.config.guild(interaction.guild).kickLogChannel.set(channel.id)
-                    embedSuccess.add_field(name="Kick Log Channeöl", value=channel)
+                    embedSuccess.add_field(name="Kick Log Channeöl", value=f"<#{channel.id}>")
 
                 case "bChannel":
 
                     await self.config.guild(interaction.guild).banLogChannel.set(channel.id)
-                    embedSuccess.add_field(name="Ban Log Channel", value=channel)
+                    embedSuccess.add_field(name="Ban Log Channel", value=f"<#{channel.id}>")
 
                 case "uChannel":
 
                     await self.config.guild(interaction.guild).updateLogChannel.set(channel.id)
-                    embedSuccess.add_field(name="Client-Update Log Channel", value=channel)
+                    embedSuccess.add_field(name="Client-Update Log Channel", value=f"<#{chachannel.idnnel}>")
 
                 case "jChannel":
 
                     await self.config.guild(interaction.guild).joinLogChannel.set(channel.id)
-                    embedSuccess.add_field(name="Join Log Channel", value=channel)
+                    embedSuccess.add_field(name="Join Log Channel", value=f"<#{channel.id}>")
 
                 case "mChannel":
 
                     await self.config.guild(interaction.guild).deleteMessageLogChannel.set(channel.id)
-                    embedSuccess.add_field(name="Delete Message Log Channel", value=channel)
+                    embedSuccess.add_field(name="Delete Message Log Channel", value=f"<#{channel.id}>")
 
                 case "sbChannel":
 
@@ -132,12 +132,12 @@ class Modsystem(commands.Cog):
                                     await dChannel.set_permissions(user, overwrite=overwriteShow)
                                 else:
                                     await dChannel.set_permissions(user, overwrite=overwriteHide)
-                    embedSuccess.add_field(name="Softban Channel", value=channel)
+                    embedSuccess.add_field(name="Softban Channel", value=f"<#{channel.id}>")
 
                 case "sblChannel":
 
                     await self.config.guild(interaction.guild).softBanLogChannel.set(channel.id)
-                    embedSuccess.add_field(name="Softban Log Channel", value=channel)
+                    embedSuccess.add_field(name="Softban Log Channel", value=f"<#{channel.id}>")
 
             if(choice.value == "sbChannel"):
                 await interaction.followup.send(embed=embedSuccess)
