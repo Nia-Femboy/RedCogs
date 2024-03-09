@@ -61,7 +61,7 @@ class Modsystem(commands.Cog):
     modsystem = app_commands.Group(name="modlog", description="Modlog setup commands")
 
     @modsystem.command(name="setupchannel", description="Allgemeines Setup des Systems")
-    @app_commands.describe(choice="Bitte den gewünschten Parameter auswählen", channelid="Die ChannelID des jeweiligen Channel")
+    @app_commands.describe(choice="Bitte den gewünschten Parameter auswählen", channel="Der zu nutzende Channel")
     @app_commands.choices(choice=[
         app_commands.Choice(name="General Logchannel", value="gChannel"),
         app_commands.Choice(name="Warn Logchannel", value="wChannel"),
@@ -74,52 +74,52 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Softban Logchannel", value="sblChannel")
     ])
     @app_commands.checks.has_permissions(administrator=True)
-    async def setup(self, interaction: discord.Interaction, choice: app_commands.Choice[str], channelid: str):
+    async def setup(self, interaction: discord.Interaction, choice: app_commands.Choice[str], channel: discord.TextChannel):
         try:
 
-            if(interaction.guild.get_channel(int(channelid)) is None):
+            if(interaction.guild.get_channel(channel.id) is None):
                         raise Exception("Channel existiert nicht")
 
             match choice.value:
 
                 case "gChannel":
 
-                    await self.config.guild(interaction.guild).generalLogChannel.set(int(channelid))
-                    embedSuccess.add_field(name="General Log Channel", value=channelid)
+                    await self.config.guild(interaction.guild).generalLogChannel.set(channel.id)
+                    embedSuccess.add_field(name="General Log Channel", value=channel)
 
                 case "wChannel":
 
-                    await self.config.guild(interaction.guild).warnLogChannel.set(int(channelid))
-                    embedSuccess.add_field(name="Warning Log Channel", value=channelid)
+                    await self.config.guild(interaction.guild).warnLogChannel.set(channel.id)
+                    embedSuccess.add_field(name="Warning Log Channel", value=channel)
 
                 case "kChannel":
 
-                    await self.config.guild(interaction.guild).kickLogChannel.set(int(channelid))
-                    embedSuccess.add_field(name="Kick Log Channeöl", value=channelid)
+                    await self.config.guild(interaction.guild).kickLogChannel.set(channel.id)
+                    embedSuccess.add_field(name="Kick Log Channeöl", value=channel)
 
                 case "bChannel":
 
-                    await self.config.guild(interaction.guild).banLogChannel.set(int(channelid))
-                    embedSuccess.add_field(name="Ban Log Channel", value=channelid)
+                    await self.config.guild(interaction.guild).banLogChannel.set(channel.id)
+                    embedSuccess.add_field(name="Ban Log Channel", value=channel)
 
                 case "uChannel":
 
-                    await self.config.guild(interaction.guild).updateLogChannel.set(int(channelid))
-                    embedSuccess.add_field(name="Client-Update Log Channel", value=channelid)
+                    await self.config.guild(interaction.guild).updateLogChannel.set(channel.id)
+                    embedSuccess.add_field(name="Client-Update Log Channel", value=channel)
 
                 case "jChannel":
 
-                    await self.config.guild(interaction.guild).joinLogChannel.set(int(channelid))
-                    embedSuccess.add_field(name="Join Log Channel", value=channelid)
+                    await self.config.guild(interaction.guild).joinLogChannel.set(channel.id)
+                    embedSuccess.add_field(name="Join Log Channel", value=channel)
 
                 case "mChannel":
 
-                    await self.config.guild(interaction.guild).deleteMessageLogChannel.set(int(channelid))
-                    embedSuccess.add_field(name="Delete Message Log Channel", value=channelid)
+                    await self.config.guild(interaction.guild).deleteMessageLogChannel.set(channel.id)
+                    embedSuccess.add_field(name="Delete Message Log Channel", value=channel)
 
                 case "sbChannel":
 
-                    await self.config.guild(interaction.guild).softBanChannel.set(int(channelid))
+                    await self.config.guild(interaction.guild).softBanChannel.set(channel.id)
                     await interaction.response.defer()
                     overwriteHide = discord.PermissionOverwrite()
                     overwriteShow = discord.PermissionOverwrite()
@@ -127,17 +127,17 @@ class Modsystem(commands.Cog):
                     overwriteShow.view_channel=True
                     for user in interaction.guild.members:
                         if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned')):
-                            for channel in interaction.guild.channels:
-                                if(channel.id == int(channelid)):
-                                    await channel.set_permissions(user, overwrite=overwriteShow)
+                            for dChannel in interaction.guild.channels:
+                                if(dChannel.id == channel.id):
+                                    await dChannel.set_permissions(user, overwrite=overwriteShow)
                                 else:
-                                    await channel.set_permissions(user, overwrite=overwriteHide)
-                    embedSuccess.add_field(name="Softban Channel", value=channelid)
+                                    await dChannel.set_permissions(user, overwrite=overwriteHide)
+                    embedSuccess.add_field(name="Softban Channel", value=channel)
 
                 case "sblChannel":
 
-                    await self.config.guild(interaction.guild).softBanLogChannel.set(int(channelid))
-                    embedSuccess.add_field(name="Softban Log Channel", value=channelid)
+                    await self.config.guild(interaction.guild).softBanLogChannel.set(channel.id)
+                    embedSuccess.add_field(name="Softban Log Channel", value=channel)
 
             if(choice.value == "sbChannel"):
                 await interaction.followup.send(embed=embedSuccess)
@@ -344,21 +344,21 @@ class Modsystem(commands.Cog):
                     if(wert == None):
                         raise Exception("Bitte den wert festlegen")
                     await self.config.guild(interaction.guild).warnWeight.set(int(wert))
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
+                    embedSuccess.add_field(name="Warnpunkte", value=int(wert))
 
                 case "warnKickWeight":
 
                     if(wert == None):
                         raise Exception("Bitte den wert festlegen")
                     await self.config.guild(interaction.guild).warnKickWeight.set(int(wert))
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
+                    embedSuccess.add_field(name="Kickschwelle", value=int(wert))
 
                 case "warnBanWeight":
 
                     if(wert == None):
                         raise Exception("Bitte den wert festlegen")
                     await self.config.guild(interaction.guild).warnBanWeight.set(int(wert))
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
+                    embedSuccess.add_field(name="Banschwelle", value=int(wert))
 
                 case "warnDynamicReset":
 
@@ -369,7 +369,7 @@ class Modsystem(commands.Cog):
                     else:
                         Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(interaction.guild).warnResetTime())
                     await self.config.guild(interaction.guild).warnDynamicReset.set(activate)
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=activate)
+                    embedSuccess.add_field(name="Dynamischer Reset", value=activate)
 
                 case "warnDynamicResetTime":
 
@@ -378,14 +378,14 @@ class Modsystem(commands.Cog):
                     if(await self.config.guild(interaction.guild).warnDynamicReset() and await self.config.guild(interaction.guild).enableWarn()):
                         Modsystem.remove_warn_points.change_interval(minutes=int(wert))
                     await self.config.guild(interaction.guild).warnDynamicResetTime.set(int(wert))
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
+                    embedSuccess.add_field(name="Dynamische reset Zeit", value=int(wert))
 
                 case "warnDynamicResetCount":
 
                     if(wert == None):
                         raise Exception("Bitte den wert festlegen")
                     await self.config.guild(interaction.guild).warnDynamicResetCount.set(int(wert))
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
+                    embedSuccess.add_field(name="Dynamische reset Punkte", value=int(wert))
 
                 case "warnResetTime":
 
@@ -394,14 +394,14 @@ class Modsystem(commands.Cog):
                     if(await self.config.guild(interaction.guild).warnDynamicReset() == False and await self.config.guild(interaction.guild).enableWarn()):
                         Modsystem.remove_warn_points.change_interval(minutes=int(wert))
                     await self.config.guild(interaction.guild).warnResetTime.set(int(wert))
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
+                    embedSuccess.add_field(name="Resettime", value=int(wert))
 
                 case "warnUseDM":
 
                     if(activate == None):
                         raise Exception("Bitte activate festlegen")
                     await self.config.guild(interaction.guild).warnUseDM.set(activate)
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=activate)
+                    embedSuccess.add_field(name="DM User bei Verwarnung", value=activate)
 
                 case "warnUseChannel":
 
@@ -415,28 +415,28 @@ class Modsystem(commands.Cog):
                             raise Exception("Kein gültiger Channel festgelegt")
                     else:
                         await self.config.guild(interaction.guild).warnUseChannel.set(activate)
-                        embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=activate)
+                        embedSuccess.add_field(name="Nutze Warnchannel", value=activate)
                     
                 case "warnFirstMultiplicator":
 
                     if(wert == None):
                         raise Exception("Bitte einen Wert setzten")
                     await self.config.guild(interaction.guild).warnFirstMultiplicator.set(float(wert.replace(",", ".")))
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=float(wert.replace(",", ".")))
+                    embedSuccess.add_field(name="Multiplikator 1. Stufe", value=float(wert.replace(",", ".")))
 
                 case "warnSecondMultiplicator":
 
                     if(wert == None):
                         raise Exception("Bitte einen Wert setzten")
                     await self.config.guild(interaction.guild).warnSecondMultiplicator.set(float(wert.replace(",", ".")))
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=float(wert.replace(",", ".")))
+                    embedSuccess.add_field(name="Multiplikator 2. Stufe", value=float(wert.replace(",", ".")))
 
                 case "warnThirdMultiplicator":
 
                     if(wert == None):
                         raise Exception("Bitte einen Wert setzten")
                     await self.config.guild(interaction.guild).warnThirdMultiplicator.set(float(wert.replace(",", ".")))
-                    embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=float(wert.replace(",", ".")))
+                    embedSuccess.add_field(name="Multiplikator 3. Stufe", value=float(wert.replace(",", ".")))
 
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
@@ -964,13 +964,15 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def inituser(self, interaction: discord.Interaction):
         try:
+            await interaction.response.defer(ephemeral=True)
             for user in interaction.guild.members:
                 if(dict(await self.config.guild(interaction.guild).users()).get(str(user.id)) is None):
                     await Modsystem.init_user(self, user)
-            await interaction.response.send_message("Erfoglreich")
+            embedLog.description=f"Es wurden alle Fehlenden User erfolgreich angelegt"
+            await interaction.followup.send(embed=embedLog)
         except Exception as error:
             embedFailure.description(f"**Es ist folgender Fehler aufgetreten:**\n\n{error}")
-            await interaction.response.send_message(embed=embedFailure)
+            await interaction.followup.send(embed=embedFailure, ephemeral=True)
 
     @modsystem.command(name="help", description="Hilfe zu allen Commands")
     async def help(self, interaction: discord.Interaction):
