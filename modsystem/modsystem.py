@@ -45,16 +45,17 @@ class Modsystem(commands.Cog):
             warnResetTime=0,
             warnUseChannel=False,
             warnUseDM=True,
-            warnModRole=0,
+            modRole=0,
             warnFirstMultiplicator=1,
             warnSecondMultiplicator=1,
             warnThirdMultiplicator=1,
             softBanChannel=0,
+            softBanLogChannel=0,
             deleteLinks=False,
             linkPattern=r"https?:\/\/.*\..{2,}",
             saveDeletedPics=False,
-            userWarns={},
-            userInvites={}
+            users={},
+            invites={}
         )
 
     modsystem = app_commands.Group(name="modlog", description="Modlog setup commands")
@@ -69,7 +70,8 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Update Logchannel", value="uChannel"),
         app_commands.Choice(name="Join Logchannel", value="jChannel"),
         app_commands.Choice(name="Message Logchannel", value="mChannel"),
-        app_commands.Choice(name="Softban Channel", value="sChannel")
+        app_commands.Choice(name="Softban Channel", value="sbChannel"),
+        app_commands.Choice(name="Softban Logchannel", value="sblChannel")
     ])
     @app_commands.checks.has_permissions(administrator=True)
     async def setup(self, interaction: discord.Interaction, choice: app_commands.Choice[str], channelid: str):
@@ -115,12 +117,32 @@ class Modsystem(commands.Cog):
                     await self.config.guild(interaction.guild).deleteMessageLogChannel.set(int(channelid))
                     embedSuccess.add_field(name="Delete Message Log Channel", value=channelid)
 
-                case "sChannel":
+                case "sbChannel":
 
                     await self.config.guild(interaction.guild).softBanChannel.set(int(channelid))
+                    await interaction.response.defer()
+                    overwriteHide = discord.PermissionOverwrite()
+                    overwriteShow = discord.PermissionOverwrite()
+                    overwriteHide.view_channel=False
+                    overwriteShow.view_channel=True
+                    for user in interaction.guild.members:
+                        if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned')):
+                            for channel in interaction.guild.channels:
+                                if(channel.id == int(channelid)):
+                                    await channel.set_permissions(user, overwrite=overwriteShow)
+                                else:
+                                    await channel.set_permissions(user, overwrite=overwriteHide)
                     embedSuccess.add_field(name="Softban Channel", value=channelid)
 
-            await interaction.response.send_message(embed=embedSuccess)
+                case "sblChannel":
+
+                    await self.config.guild(interaction.guild).softBanLogChannel.set(int(channelid))
+                    embedSuccess.add_field(name="Softban Log Channel", value=channelid)
+
+            if(choice.value == "sbChannel"):
+                await interaction.followup.send(embed=embedSuccess)
+            else:
+                await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
 
         except Exception as error:
@@ -243,10 +265,10 @@ class Modsystem(commands.Cog):
                         if((interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel()) or (interaction.guild.get_channel(int(await self.config.guild(interaction.guild).joinLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False)):
                             await self.config.guild(interaction.guild).enableJoinLog.set(status)
                             for invite in await interaction.guild.invites():
-                                if(invite.code in await self.config.guild(interaction.guild).userInvites()):
-                                    await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': await self.config.guild(interaction.guild).userInvites.get_raw(invite.code, 'count'), 'uses': invite.uses})
+                                if(invite.code in await self.config.guild(interaction.guild).invites()):
+                                    await self.config.guild(interaction.guild).invites.set_raw(invite.code, value={'count': await self.config.guild(interaction.guild).invites.get_raw(invite.code, 'count'), 'uses': invite.uses})
                                 else:
-                                    await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': 0, 'uses': invite.uses})
+                                    await self.config.guild(interaction.guild).invites.set_raw(invite.code, value={'count': 0, 'uses': invite.uses})
                             embedSuccess.add_field(name="Join Log", value=status)
                         elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGeneralLogChannel()):
                             raise Exception("Kein gültiger genereller Channel definiert")
@@ -307,7 +329,6 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Die  Zeit nach der die Warnpunkte zurückgesetzt werden sollen", value="warnResetTime"),
         app_commands.Choice(name="Nutze DM um dem User den Warn mitzuteilen", value="warnUseDM"),
         app_commands.Choice(name="Nutze einen Logchannel", value="warnUseChannel"),
-        app_commands.Choice(name="Die niedrigste Modrolle welche warnen können soll", value="warnModRole"),
         app_commands.Choice(name="Multiplikator der 1. Stufe", value="warnFirstMultiplicator"),
         app_commands.Choice(name="Multiplikator der 2. Stufe", value="warnSecondMultiplicator"),
         app_commands.Choice(name="Multiplikator der 3. Stufe", value="warnThirdMultiplicator")
@@ -395,16 +416,6 @@ class Modsystem(commands.Cog):
                     else:
                         await self.config.guild(interaction.guild).warnUseChannel.set(activate)
                         embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=activate)
-
-                case "warnModRole":
-
-                    if(wert == None):
-                        raise Exception("Bitte den wert festlegen")
-                    if(interaction.guild.get_role(int(wert))):
-                        await self.config.guild(interaction.guild).warnModRole.set(int(wert))
-                        embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=int(wert))
-                    else:
-                        raise Exception("Keine gültige Rolle angegeben")
                     
                 case "warnFirstMultiplicator":
 
@@ -434,6 +445,20 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
+    @modsystem.command(name="setmodrole", description="Lege die Modrolle fest")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def setmodrole(self, interaction: discord.Interaction, role: discord.Role):
+        try:
+            if(interaction.guild.get_role(role.id)):
+                await self.config.guild(interaction.guild).modRole.set(role.id)
+                embedSuccess.add_field(name="Modrolle", value=role)
+                await interaction.response.send_message(embed=embedSuccess)
+            else:
+                raise Exception("Angegebene Rolle nicht gültig")
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure)
+
     @modsystem.command(name="getconfig", description="Schau dir die aktuelle Config an")
     @app_commands.checks.has_permissions(administrator=True)
     async def showconfig(self, interaction: discord.Interaction):
@@ -449,6 +474,7 @@ class Modsystem(commands.Cog):
                                f"Join Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\n"
                                f"Delete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n"
                                f"Softban Channel: <#{await self.config.guild(interaction.guild).softBanChannel()}>\n"
+                               f"Softban Log-Channel: <#{await self.config.guild(interaction.guild).softBanLogChannel()}>\n"
                                f"### Status:\n"
                                f"Warn funktion  aktiviert: **{await self.config.guild(interaction.guild).enableWarn()}**\n"
                                f"Kick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\n"
@@ -472,10 +498,10 @@ class Modsystem(commands.Cog):
                                f"Stufe 1 Multiplikator: **{await self.config.guild(interaction.guild).warnFirstMultiplicator()}**\n"
                                f"Stufe 2 Multiplikator: **{await self.config.guild(interaction.guild).warnSecondMultiplicator()}**\n"
                                f"Stufe 3 Multiplikator: **{await self.config.guild(interaction.guild).warnThirdMultiplicator()}**\n"
-                               f"Mindestrolle die Verwarnen kann: {interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).mention}\n"
                                f"### General:\n"
                                f"Nutze den generellen Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n"
                                f"### Misc:\n"
+                               f"Modrolle: {interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).mention}\n"
                                f"Link detection pattern: **{await self.config.guild(interaction.guild).linkPattern()}**\n")
             await interaction.response.send_message(embed=embed)
         except Exception as error:
@@ -487,10 +513,10 @@ class Modsystem(commands.Cog):
     async def updateinvitecodes(self, interaction: discord.Interaction):
         try:
             for invite in await interaction.guild.invites():
-                if(await self.config.guild(interaction.guild).userInvites.get_raw(invite.code) is None):
-                    await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': 0, 'uses': invite.uses})
+                if(await self.config.guild(interaction.guild).invites.get_raw(invite.code) is None):
+                    await self.config.guild(interaction.guild).invites.set_raw(invite.code, value={'count': 0, 'uses': invite.uses})
                 else:
-                    await self.config.guild(interaction.guild).userInvites.set_raw(invite.code, value={'count': await self.config.guild(interaction.guild).userInvites.get_raw(invite.code, 'count'), 'uses': invite.uses})
+                    await self.config.guild(interaction.guild).invites.set_raw(invite.code, value={'count': await self.config.guild(interaction.guild).invites.get_raw(invite.code, 'count'), 'uses': invite.uses})
             embedSuccess.add_field(name="Update der Invite-Codes", value="Erfolgreich")
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
@@ -498,14 +524,14 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
-    @app_commands.command()
+    @app_commands.command(name="warn", description="Verwarne User")
     @app_commands.describe(user="Der User der verwarnt werden soll", reason="Grund der Verwarnung", stufe="Die Schwere der Verwarnung 1 - 3 (Optional)")
     @app_commands.checks.cooldown(1, 90)
     async def warn(self, interaction: discord.Interaction, user: discord.Member, reason: str, stufe: int = None):
         try:
             if(await self.config.guild(interaction.guild).enableWarn() == False):
                 raise Exception("Die Funktion ist momentan nicht aktiviert")
-            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
+            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
                 raise Exception("Keine Berechtigung diesen Befehl zu nutzen")
             if(interaction.user.top_role.position <= user.top_role.position):
                 raise Exception("Du kannst keine Leute verwarnen die einen höheren oder gleichwertigen Rang haben wie du")
@@ -539,178 +565,194 @@ class Modsystem(commands.Cog):
                         case 3:
                             multiplikator = await self.config.guild(interaction.guild).warnThirdMultiplicator()
                     currentTime = datetime.now().astimezone(tz=None).strftime('%d-%m-%Y um %H:%M')
-                    if(dict(await self.config.guild(interaction.guild).userWarns()).get(str(user.id)) is None):
-                        await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'displayName': user.display_name,
+                    if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') == 0 and await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned') == False):
+                        await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
                                                                                                      'username': user.name,
                                                                                                      'currentReason': reason,
                                                                                                      'currentPoints': round(await self.config.guild(interaction.guild).warnWeight() * multiplikator),
                                                                                                      'totalPoints': round(await self.config.guild(interaction.guild).warnWeight() * multiplikator),
                                                                                                      'firstWarn': currentTime,
                                                                                                      'lastWarn': currentTime,
+                                                                                                     'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
                                                                                                      'kickCount': 0,
+                                                                                                     'softBanned': False,
                                                                                                      'banned': False})
                         embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
-                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                           f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                           f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n")
+                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                           f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                           f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
                         embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                             f"Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                             f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                             f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**")
+                                             f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                             f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                             f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                     else:
-                        if(await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'banned')):
+                        if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'banned')):
                             raise Exception("Warn nicht möglich da der User bereits gebannt ist")
-                        currentPoints = await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints') + await self.config.guild(interaction.guild).warnWeight() * multiplikator
-                        totalPoints = await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'totalPoints') + await self.config.guild(interaction.guild).warnWeight() * multiplikator
+                        currentPoints = await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') + await self.config.guild(interaction.guild).warnWeight() * multiplikator
+                        totalPoints = await self.config.guild(interaction.guild).users.get_raw(user.id, 'totalPoints') + await self.config.guild(interaction.guild).warnWeight() * multiplikator
                         if(currentPoints < await self.config.guild(interaction.guild).warnKickWeight() or (await self.config.guild(interaction.guild).warnKickWeight() < currentPoints < await self.config.guild(interaction.guild).warnBanWeight())):
-                            await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'displayName': user.display_name,
+                            await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
                                                                                                          'username': user.name,
                                                                                                          'currentReason': reason,
                                                                                                          'currentPoints': currentPoints,
                                                                                                          'totalPoints': totalPoints,
-                                                                                                         'firstWarn': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'firstWarn'),
+                                                                                                         'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
                                                                                                          'lastWarn': currentTime,
-                                                                                                         'kickCount': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount'),
+                                                                                                         'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
+                                                                                                         'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount'),
+                                                                                                         'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                                          'banned': False})
                             if(await self.config.guild(interaction.guild).warnKickWeight() - currentPoints < 0):
                                 embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
-                                                   f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                                   f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount')}**\n"
+                                                   f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                                   f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
                                                    f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
                                 embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                                     f"Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                                     f"Anzahl deiner Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount')}**\n"
-                                                     f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**")
+                                                     f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                                     f"Anzahl deiner Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
+                                                     f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                             else:
                                 embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
-                                                   f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
+                                                   f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                    f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - currentPoints}**\n"
                                                    f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
                             embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                                 f"Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**")
+                                                 f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                                 f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                         elif(await self.config.guild(interaction.guild).warnKickWeight() <= currentPoints < await self.config.guild(interaction.guild).warnBanWeight()):
-                            await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'displayName': user.display_name,
+                            await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
                                                                                                          'username': user.name,
                                                                                                          'currentReason': reason,
                                                                                                          'currentPoints': currentPoints,
                                                                                                          'totalPoints': totalPoints,
-                                                                                                         'firstWarn': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'firstWarn'),
+                                                                                                         'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
                                                                                                          'lastWarn': currentTime,
-                                                                                                         'kickCount': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount') + 1,
+                                                                                                         'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
+                                                                                                         'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount') + 1,
+                                                                                                         'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                                          'banned': False})
                             await user.kick(reason=reason)
                             embed.description=(f"{user.mention} wurde mit der Begründung **{reason}** gekickt\n\n"
-                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
+                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                f"Kickgrenze: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
                                                f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
                             embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** vom Server gekickt\n\n"
-                                                 f"Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Dies ist dein **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount')}.** Kick\n"
-                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n")
+                                                 f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                                 f"Dies ist dein **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}.** Kick\n"
+                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
                         elif(currentPoints >= await self.config.guild(interaction.guild).warnBanWeight()):
-                            await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'displayName': user.display_name,
+                            await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
                                                                                                          'username': user.name,
                                                                                                          'currentReason': reason,
                                                                                                          'currentPoints': currentPoints,
                                                                                                          'totalPoints': totalPoints,
-                                                                                                         'firstWarn': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'firstWarn'),
+                                                                                                         'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
                                                                                                          'lastWarn': currentTime,
-                                                                                                         'kickCount': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount'),
+                                                                                                         'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
+                                                                                                         'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount'),
+                                                                                                         'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                                          'banned': True})
                             await user.ban(reason=reason, delete_message_days=1)
                             embed.description=(f"{user.mention} wurde mit der Begründung **{reason}** gebannt\n\n"
-                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                               f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount')}**\n"
+                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                               f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
                                                f"Bangrenze: **{await self.config.guild(interaction.guild).warnBanWeight()}**")
                             embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** gebant\n\n")
             else:
                 currentTime = datetime.now().astimezone(tz=None).strftime('%d-%m-%Y : %H:%M')
-                if(dict(await self.config.guild(interaction.guild).userWarns()).get(str(user.id)) is None):
-                    await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'displayName': user.display_name,
+                if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') == 0 and await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned') == False):
+                    await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
                                                                                                  'username': user.name,
                                                                                                  'currentReason': reason,
                                                                                                  'currentPoints': await self.config.guild(interaction.guild).warnWeight(),
                                                                                                  'totalPoints': await self.config.guild(interaction.guild).warnWeight(),
                                                                                                  'firstWarn': currentTime,
                                                                                                  'lastWarn': currentTime,
+                                                                                                 'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
                                                                                                  'kickCount': 0,
+                                                                                                 'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                                  'banned': False})
                     embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
-                                       f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                       f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                       f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n")
+                                       f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                       f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                       f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
                     embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                         f"Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                         f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                         f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**")
+                                         f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                         f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                         f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                 else:
-                    if(await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'banned')):
+                    if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'banned')):
                         raise Exception("Warn nicht möglich da der User bereits gebant ist")
-                    currentPoints = await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints') + await self.config.guild(interaction.guild).warnWeight()
-                    totalPoints = await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'totalPoints') + await self.config.guild(interaction.guild).warnWeight()
+                    currentPoints = await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') + await self.config.guild(interaction.guild).warnWeight()
+                    totalPoints = await self.config.guild(interaction.guild).users.get_raw(user.id, 'totalPoints') + await self.config.guild(interaction.guild).warnWeight()
                     if(currentPoints < await self.config.guild(interaction.guild).warnKickWeight() or (await self.config.guild(interaction.guild).warnKickWeight() < currentPoints < await self.config.guild(interaction.guild).warnBanWeight())):
-                        await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'displayName': user.display_name,
+                        await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
                                                                                                      'username': user.name,
                                                                                                      'currentReason': reason,
                                                                                                      'currentPoints': currentPoints,
                                                                                                      'totalPoints': totalPoints,
-                                                                                                     'firstWarn': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'firstWarn'),
+                                                                                                     'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
                                                                                                      'lastWarn': currentTime,
-                                                                                                     'kickCount': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount'),
+                                                                                                     'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
+                                                                                                     'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount'),
+                                                                                                     'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                                      'banned': False})
                         if(await self.config.guild(interaction.guild).warnKickWeight() - currentPoints < 0):
                             embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
-                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                               f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount')}**\n"
+                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                               f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
                                                f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
                             embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                                 f"Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Anzahl deiner Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount')}**\n"
-                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**")
+                                                 f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                                 f"Anzahl deiner Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
+                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                         else:
                             embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
-                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
+                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - currentPoints}**\n"
                                                f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
                             embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                                 f"Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**")
+                                                 f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                                 f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                     elif(await self.config.guild(interaction.guild).warnKickWeight() <= currentPoints < await self.config.guild(interaction.guild).warnBanWeight()):
-                        await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'displayName': user.display_name,
+                        await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
                                                                                                      'username': user.name,
                                                                                                      'currentReason': reason,
                                                                                                      'currentPoints': currentPoints,
                                                                                                      'totalPoints': totalPoints,
-                                                                                                     'firstWarn': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'firstWarn'),
+                                                                                                     'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
                                                                                                      'lastWarn': currentTime,
-                                                                                                     'kickCount': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount') + 1,
+                                                                                                     'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
+                                                                                                     'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount') + 1,
+                                                                                                     'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                                      'banned': False})
                         await user.kick(reason=reason)
                         embed.description=(f"{user.mention} wurde mit der Begründung **{reason}** gekickt\n\n"
-                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
+                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                            f"Kickgrenze: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
                                            f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
                         embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** vom Server gekickt\n\n"
-                                             f"Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                             f"Dies ist dein **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount')}.** Kick\n"
-                                             f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n")
+                                             f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                             f"Dies ist dein **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}.** Kick\n"
+                                             f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
                     elif(currentPoints >= await self.config.guild(interaction.guild).warnBanWeight()):
-                        await self.config.guild(interaction.guild).userWarns.set_raw(user.id, value={'displayName': user.display_name,
+                        await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
                                                                                                      'username': user.name,
                                                                                                      'currentReason': reason,
                                                                                                      'currentPoints': currentPoints,
                                                                                                      'totalPoints': totalPoints,
-                                                                                                     'firstWarn': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'firstWarn'),
+                                                                                                     'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
                                                                                                      'lastWarn': currentTime,
-                                                                                                     'kickCount': await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount'),
+                                                                                                     'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
+                                                                                                     'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount'),
+                                                                                                     'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                                      'banned': True})
                         await user.ban(reason=reason, delete_message_days=1)
                         embed.description=(f"{user.mention} wurde mit der Begründung **{reason}** gebannt\n\n"
-                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'currentPoints')}**\n"
-                                           f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(user.id, 'kickCount')}**\n"
+                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                           f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
                                            f"Bangrenze: **{await self.config.guild(interaction.guild).warnBanWeight()}**")
                         embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** gebant\n\n")
                         
@@ -732,8 +774,8 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def setwarnpoints(self, interaction: discord.Interaction, user: discord.User, points: int):
         try:
-            if(dict(await self.config.guild(interaction.guild).userWarns()).get(str(user.id)) is not None):
-                await self.config.guild(interaction.guild).userWarns.set_raw(user.id, 'currentPoints', value=points)
+            if(dict(await self.config.guild(interaction.guild).users()).get(str(user.id)) is not None):
+                await self.config.guild(interaction.guild).users.set_raw(user.id, 'currentPoints', value=points)
                 embedSuccess.add_field(name="CurrentPoints", value=points)
                 await interaction.response.send_message(embed=embedSuccess)
                 embedSuccess.clear_fields()
@@ -746,18 +788,18 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
-    @modsystem.command(name="showwuserwarnstats", description="Zeigt die aktuellen Daten für einen User oder dich selbst an")
+    @modsystem.command(name="showuserstats", description="Zeigt die aktuellen Daten für einen User oder dich selbst an")
     @app_commands.describe(user="User")
-    async def showuserwarnstats(self, interaction: discord.Interaction, user: discord.User = None):
+    async def showuserstats(self, interaction: discord.Interaction, user: discord.User = None):
         try:
-            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
+            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
                 if(interaction.user != user):
                     if(user is not None):
                         raise Exception("Du darfst dir nur deine Eigenen Daten anschauen")
             embed = discord.Embed(title=f"Hier sind die aktuellen Daten", color=0xfc7f03)
             if(user is None):
-                if(dict(await self.config.guild(interaction.guild).userWarns()).get(str(interaction.user.id)) is not None):
-                    currentUserRecord = await self.config.guild(interaction.guild).userWarns.get_raw(interaction.user.id)
+                if(dict(await self.config.guild(interaction.guild).users()).get(str(interaction.user.id)) is not None):
+                    currentUserRecord = await self.config.guild(interaction.guild).users.get_raw(interaction.user.id)
                     ban = "Ja" if currentUserRecord.get("banned") == True else "Nein"
                     embed.description=(f"**Es ist aktuell folgendes von {interaction.user.mention} gespeichert:**\n\n"
                                        f"Begründung des letzten Warns: **{currentUserRecord.get('currentReason')}**\n"
@@ -772,8 +814,8 @@ class Modsystem(commands.Cog):
                     embed.description=f"**Es liegen aktuell keine Daten zu {interaction.user.mention} vor**"
                     embed.set_thumbnail(url=interaction.user.display_avatar.url)
             else:
-                if(dict(await self.config.guild(interaction.guild).userWarns()).get(str(user.id)) is not None):
-                    currentUserRecord = await self.config.guild(interaction.guild).userWarns.get_raw(user.id)
+                if(dict(await self.config.guild(interaction.guild).users()).get(str(user.id)) is not None):
+                    currentUserRecord = await self.config.guild(interaction.guild).users.get_raw(user.id)
                     ban = "Ja" if currentUserRecord.get("banned") == True else "Nein"
                     embed.description=(f"**Es ist aktuell folgendes von {user.mention} gespeichert:**\n\n"
                                     f"Begründung des letzten Warns: **{currentUserRecord.get('currentReason')}**\n"
@@ -796,26 +838,26 @@ class Modsystem(commands.Cog):
     @modsystem.command(name="showwarnlist", description="Zeige eine List an mit allen Verwarnungen")
     async def showwarnlist(self, interaction: discord.Interaction):
         try:
-            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
+            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
                 raise Exception("Du hast keine Berechtigungen diesen Befehl auszuführen")
-            embed = discord.Embed(title="Alle aktuellen Verwarnungen", color=0xfc7f03)
-            listString = ""
+            embed = discord.Embed(color=0xfc7f03)
+            listString = "## Alle aktuellen Verwarnungen\n"
             embedList = []
-            for index, userID in enumerate(dict(await self.config.guild(interaction.guild).userWarns()), start=1):
+            for index, userID in enumerate(dict(await self.config.guild(interaction.guild).users()), start=1):
                 if(interaction.guild.get_member(int(userID)) is None):
-                    listString += (f"{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'displayName')}\n\n"
-                               f"Username: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'username')}**\n"
-                               f"Aktuelle Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'currentPoints')}**\n"
-                               f"Gesamte Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'totalPoints')}**\n"
-                               f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'kickCount')}**\n")
+                    listString += (f"{await self.config.guild(interaction.guild).users.get_raw(userID, 'displayName')}\n\n"
+                               f"Username: **{await self.config.guild(interaction.guild).users.get_raw(userID, 'username')}**\n"
+                               f"Aktuelle Points: **{await self.config.guild(interaction.guild).users.get_raw(userID, 'currentPoints')}**\n"
+                               f"Gesamte Points: **{await self.config.guild(interaction.guild).users.get_raw(userID, 'totalPoints')}**\n"
+                               f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(userID, 'kickCount')}**\n")
                 else:
                     listString += (f"{interaction.guild.get_member(int(userID)).mention}\n\n"
                                 f"Username: **{interaction.guild.get_member(int(userID)).name}**\n"
-                                f"Aktuelle Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'currentPoints')}**\n"
-                                f"Gesamte Points: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'totalPoints')}**\n"
-                                f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'kickCount')}**\n")
-                if(await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'banned') == False):
-                    listString += f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).userWarns.get_raw(userID, 'currentPoints')}**\n\n\n"
+                                f"Aktuelle Points: **{await self.config.guild(interaction.guild).users.get_raw(userID, 'currentPoints')}**\n"
+                                f"Gesamte Points: **{await self.config.guild(interaction.guild).users.get_raw(userID, 'totalPoints')}**\n"
+                                f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(userID, 'kickCount')}**\n")
+                if(await self.config.guild(interaction.guild).users.get_raw(userID, 'banned') == False):
+                    listString += f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(userID, 'currentPoints')}**\n\n\n"
                 else:
                     listString += f"**User ist gebannt**\n\n\n"
                 if index % 3 == 0:
@@ -829,28 +871,74 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
-    # @modsystem.command(name="softban", description="Softbanne einen User")
-    # @app_commands.describe(user="Der User der einen Softban bekommen soll")
-    # async def softban(self, interaction: discord.Interaction, user: discord.User):
-    #     try:
-    #     except Exception as error:
-    #         embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
-    #         await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+    @app_commands.command(name="softban", description="Softbanne einen User")
+    @app_commands.describe(user="Der User der einen Softban bekommen soll")
+    async def softban(self, interaction: discord.Interaction, user: discord.Member):
+        try:
+            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
+                raise Exception("Du hast keine Berechtigung für diesen Befehl")
+            elif(interaction.user.top_role.position <= user.top_role.position):
+                raise Exception("Du kannst keinen User mit einem höheren oder gleichen Rang Softbannen")
+            elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).softBanChannel())) is None):
+                raise Exception("Kein gültiger Channel gesetzt")
+            elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned')):
+                raise Exception("Dieser User ist bereits im Softban")
+            await interaction.response.defer(ephemeral=True)
+            sbChannel = await self.config.guild(interaction.guild).softBanChannel()
+            overwriteHide = discord.PermissionOverwrite()
+            overwriteShow = discord.PermissionOverwrite()
+            overwriteHide.view_channel=False
+            overwriteShow.view_channel=True
+            for channel in interaction.guild.channels:
+                if(channel.id == sbChannel):
+                    await channel.set_permissions(user, overwrite=overwriteShow)
+                else:
+                    await channel.set_permissions(user, overwrite=overwriteHide)
+            await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=True)
+            await user.send(f"Du hast einen Softban auf **{interaction.guild.name}** bekommen")
+            embedLog.description=f"{user.mention} hat von {interaction.user.mention} einen **Softban** bekommen"
+            if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
+                await interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel()).send(embed=embedLog)
+            else:
+                await interaction.guild.get_channel(await self.config.guild(interaction.guild).softBanLogChannel()).send(embed=embedLog)
+            embedLog.description=f"{user.mention} hat erfolgreich einen Softban erhalten"
+            await interaction.followup.send(embed=embedLog)
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
-    # @modsystem.command(name="unsban", description="Nimmt den Softban wieder zurück")
-    # @app_commands.describe(user="Der User bei dem der Softban wieder zurück genommen werden soll")
-    # async def unban(self, interaction: discord.Interaction, user: discord.User):
-    #     try:
-    #     except Exception as error:
-    #         embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
-    #         await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+    @app_commands.command(name="revokesoftban", description="Nimmt den Softban wieder zurück")
+    @app_commands.describe(user="Der User bei dem der Softban wieder zurück genommen werden soll")
+    async def revokesoftban(self, interaction: discord.Interaction, user: discord.User):
+        try:
+            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
+                raise Exception("Du hast keine Berechtigung für diesen Befehl")
+            elif(interaction.user.top_role.position <= user.top_role.position):
+                raise Exception("Du kannst keinen User mit einem höheren oder gleichen Rang Softbannen")
+            elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned') == False):
+                raise Exception("Dieser User hat aktuell keinen Softban")
+            await interaction.response.defer(ephemeral=True)
+            for channel in interaction.guild.channels:
+                await channel.set_permissions(user, overwrite=None)
+            await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=False)
+            await user.send(f"Dein Softban auf **{interaction.guild.name}** wurde zurückgenommen")
+            embedLog.description=f"Der **Softban** von {user.mention} wurde von {interaction.user.mention} aufgehoben"
+            if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
+                await interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel()).send(embed=embedLog)
+            else:
+                await interaction.guild.get_channel(await self.config.guild(interaction.guild).softBanLogChannel()).send(embed=embedLog)
+            embedLog.description=f"Der Softban von {user.mention} wurde erfolgreich aufgehoben"
+            await interaction.followup.send(embed=embedLog)
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
             
     @app_commands.command()
     @app_commands.describe()
     @app_commands.checks.has_permissions(administrator=True)
     async def kick(self, interaction: discord.Interaction, user: discord.Member, reason: str):
         try:
-            if(interaction.user.top_role.position < interaction.guild.get_role(int(await self.config.guild(interaction.guild).warnModRole()))):
+            if(interaction.user.top_role.position < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 user.kick(reason=reason)
                 embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
                 await interaction.response.send_message(embed=embedLog, ephemeral=True)
@@ -863,7 +951,7 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str):
         try:
-            if(interaction.user.top_role.position <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).warnModRole()))):
+            if(interaction.user.top_role.position <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung")
             user.ban(reason=reason, delete_message_days=1)
             embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
@@ -871,6 +959,18 @@ class Modsystem(commands.Cog):
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
+    @modsystem.command(name="inituser", description="Initialisiere alle fehlenden User")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def inituser(self, interaction: discord.Interaction):
+        try:
+            for user in interaction.guild.members:
+                if(dict(await self.config.guild(interaction.guild).users()).get(str(user.id)) is None):
+                    await Modsystem.init_user(self, user)
+            await interaction.response.send_message("Erfoglreich")
+        except Exception as error:
+            embedFailure.description(f"**Es ist folgender Fehler aufgetreten:**\n\n{error}")
+            await interaction.response.send_message(embed=embedFailure)
 
     @modsystem.command(name="help", description="Hilfe zu allen Commands")
     async def help(self, interaction: discord.Interaction):
@@ -880,20 +980,20 @@ class Modsystem(commands.Cog):
                                    f"### Generelle Befehle:\n"
                                    f"* **/modlog showwarnlist**\n"
                                    f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
-                                   f"* **/modlog showuserwarnstats**\n"
+                                   f"* **/modlog showuserstats**\n"
                                    f" * Zeigt deine aktuellen Warndaten an\n")
-            if(interaction.user.top_role.position > interaction.guild.get_role(await self.config.guild(interaction.guild).warnModRole()).position):
+            if(interaction.user.top_role.position > interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
                 embed.description=(f"# Hilfemenü\n"
                                    f"### Generelle Befehle\n"
                                    f"* **/modlog showwarnlist**\n"
                                    f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
-                                   f"* **/modlog showuserwarnstats [user]**\n"
+                                   f"* **/modlog showuserstats [user]**\n"
                                    f" * Zeigt deine aktuellen Warndaten an oder lass dir die von andern anzeigen\n"
                                    f"* **/warn <user> <reason> [stufe]**\n"
                                    f" * Verwarne den angegebenen User\n"
                                    f"* **/softban <user>**\n"
                                    f" * Erteile dem User einen Softban\n"
-                                   f"* **/unban <user>**\n"
+                                   f"* **/revokesoftban <user>**\n"
                                    f" * Nimm den Softban von dem User wieder zurück\n")
                 if(app_commands.checks.has_permissions(administrator=True)):
                     embed.description += (f"### Setup\n"
@@ -909,7 +1009,11 @@ class Modsystem(commands.Cog):
                                     f"* **/modlog updateinvitecodes**\n"
                                     f" * Update die gespeicherten Invite-Codes falls es Probleme mit dem Joinlog gibt\n"
                                     f"* **/modlog getconfig**\n"
-                                    f" * Zeige die Aktuelle Konfiguration")
+                                    f" * Zeige die Aktuelle Konfiguration\n"
+                                    f"* **/modlog inituser**\n"
+                                    f" * Initialisiere alle fehlenden User\n"
+                                    f"* **/modloge setmodrole <role>**\n"
+                                    f" * Setze die Modrolle")
             embed.set_footer(text=f"Das Serverteam von {interaction.guild.name}", icon_url=interaction.guild.icon.url)
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
@@ -964,10 +1068,31 @@ class Modsystem(commands.Cog):
         for inv in invite_list:
             if inv.code == code:
                 return inv
+            
+    async def init_user(self, member):
+        await self.config.guild(member.guild).users.set_raw(member.id, value={'displayName': member.display_name,
+                                                                                  'username': member.name,
+                                                                                  'currentReason': "",
+                                                                                  'currentPoints': 0,
+                                                                                  'totalPoints': 0,
+                                                                                  'firstWarn': "",
+                                                                                  'lastWarn': "",
+                                                                                  'warnCount': 0,
+                                                                                  'kickCount': 0,
+                                                                                  'softBanned': False,
+                                                                                  'banned': False})
+        
+    async def clear_user(self, member):
+        data = await self.config.guild(member.guild).users.get_raw(member.id)
+        timeDiff = datetime.now() - member.joined_at.replace(tzinfo=None)
+        oneDay = timedelta(days=1)
+        if(data.get('warnCount') == 0 and data.get('kickCount') == 0 and data.get('softBanned') == False and data.get('banned') == False and timeDiff <= oneDay ):
+            await self.config.guild(member.guild).users.clear_raw(member.id)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
         try:
+            await Modsystem.init_user(self, member)
             if(await self.config.guild(member.guild).enableJoinLog()):
                 if(await self.config.guild(member.guild).useGeneralLogChannel() == True):
                     channel = member.guild.get_channel(await self.config.guild(member.guild).generalLogChannel())
@@ -975,23 +1100,23 @@ class Modsystem(commands.Cog):
                     channel = member.guild.get_channel(await self.config.guild(member.guild).joinLogChannel())
                 invites_after = await member.guild.invites()
                 usedInvite: discord.invite
-                for invite in await self.config.guild(member.guild).userInvites():
+                for invite in await self.config.guild(member.guild).invites():
                     result = await Modsystem.get_invite_with_code(invites_after, invite)
                     if(result is None):
-                        await self.config.guild(member.guild).userInvites.clear_raw(invite)
+                        await self.config.guild(member.guild).invites.clear_raw(invite)
                     else:
-                        if(await self.config.guild(member.guild).userInvites.get_raw(invite, 'uses') < result.uses):
+                        if(await self.config.guild(member.guild).invites.get_raw(invite, 'uses') < result.uses):
                             usedInvite = result
                             usedInviteInfo = await self.bot.fetch_invite(result.code)
                             break
-                await self.config.guild(member.guild).userInvites.set_raw(usedInvite.code, value={'count': await self.config.guild(member.guild).userInvites.get_raw(usedInvite.code, 'count') + 1, 'uses': await self.config.guild(member.guild).userInvites.get_raw(usedInvite.code, 'uses') + 1})
-                await self.config.guild(member.guild).userInvites.set_raw(member.id, value={'invitecode': usedInvite.code})
+                await self.config.guild(member.guild).invites.set_raw(usedInvite.code, value={'count': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'count') + 1, 'uses': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'uses') + 1})
+                await self.config.guild(member.guild).invites.set_raw(member.id, value={'invitecode': usedInvite.code})
                 embedLog.set_thumbnail(url=member.display_avatar.url)
                 embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** von {usedInvite.inviter.mention} beigetreten\n\n"
                              f"Informationen zu dem Invite:\n"
                              f"* Benutzungen: **{usedInvite.uses}**\n"
                              f"* Channel: {usedInvite.channel.mention}\n"
-                             f"* Geblieben: **{await self.config.guild(member.guild).userInvites.get_raw(usedInvite.code, 'count')}**\n"
+                             f"* Geblieben: **{await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'count')}**\n"
                              f"* Mitglieder: **{usedInviteInfo.approximate_member_count}**\n"
                              f"* Zurzeit aktiv: **{usedInviteInfo.approximate_presence_count}**\n"
                              f"* Läuft ab am: ")
@@ -1009,13 +1134,12 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_member_remove(self, data):
         try:
-            inviteCode = await self.config.guild(data.user.guild).userInvites.get_raw(data.user.id, 'invitecode')
-            await self.config.guild(data.user.guild).userInvites.clear_raw(data.user.id)
-            await self.config.guild(data.user.guild).userInvites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).userInvites.get_raw(inviteCode, 'count') - 1, 'uses': await self.config.guild(data.user.guild).userInvites.get_raw(inviteCode, 'uses')})
+            inviteCode = await self.config.guild(data.user.guild).invites.get_raw(data.user.id, 'invitecode')
+            await self.config.guild(data.user.guild).invites.clear_raw(data.user.id)
+            await self.config.guild(data.user.guild).invites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).invites.get_raw(inviteCode, 'count') - 1, 'uses': await self.config.guild(data.user.guild).invites.get_raw(inviteCode, 'uses')})
+            await Modsystem.clear_user(self, data.user)
         except Exception as error:
             print("Fehler bei Member-Remove: " + str(error))
-            print(data.guild_id)
-            print(data.user)
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, data):
@@ -1079,14 +1203,14 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_invite_create(self, invite):
         try:
-            await self.config.guild(invite.guild).userInvites.set_raw(invite.code, value={'count': 0, 'uses': 0})
+            await self.config.guild(invite.guild).invites.set_raw(invite.code, value={'count': 0, 'uses': 0})
         except Exception as error:
             print("Fehler bei Invite-Create: " + str(error))
 
     @commands.Cog.listener()
     async def on_invite_delete(self, invite):
         try:
-            await self.config.guild(invite.guild).userInvites.clear_raw(invite.code)
+            await self.config.guild(invite.guild).invites.clear_raw(invite.code)
         except Exception as error:
             print("Fehler bei Invite-Delete: " + str(error))
 
@@ -1102,8 +1226,8 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_member_unban(self, guild, user):
         try:
-            if(dict(await self.config.guild(guild).userWarns()).get(str(user.id)) is not None):
-                await self.config.guild(guild).userWarns.set_raw(user.id, 'banned', value=False)
+            if(dict(await self.config.guild(guild).users()).get(str(user.id)) is not None):
+                await self.config.guild(guild).users.set_raw(user.id, 'banned', value=False)
         except Exception as error:
             print("Fehler bei Member-Unban: " + str(error))
 
@@ -1112,13 +1236,13 @@ class Modsystem(commands.Cog):
         try:
             for guild in self.bot.guilds:
                 if(await self.config.guild(guild).warnDynamicReset()):
-                    for userWarn in await self.config.guild(guild).userWarns():
-                        if(await self.config.guild(guild).userWarns.get_raw(userWarn, 'currentPoints') > 0 and guild.get_member(userWarn) is not None):
-                            await self.config.guild(guild).userWarns.set_raw(userWarn, 'currentPoints', value=await self.config.guild(guild).userWarns.get_raw(userWarn, 'currentPoints') - await self.config.guild(guild).warnDynamicResetCount())
+                    for userWarn in await self.config.guild(guild).users():
+                        if(await self.config.guild(guild).users.get_raw(userWarn, 'currentPoints') > 0 and guild.get_member(userWarn) is not None):
+                            await self.config.guild(guild).users.set_raw(userWarn, 'currentPoints', value=await self.config.guild(guild).users.get_raw(userWarn, 'currentPoints') - await self.config.guild(guild).warnDynamicResetCount())
                 else:
-                    for userWarn in await self.config.guild(guild).userWarns():
+                    for userWarn in await self.config.guild(guild).users():
                         if(guild.get_member(userWarn) is not None):
-                            await self.config.guild(guild).userWarns.set_raw(userWarn, 'currentPoints', value=0)
+                            await self.config.guild(guild).users.set_raw(userWarn, 'currentPoints', value=0)
         except Exception as error:
             print("Fehler bei Scheduled-Task: " + str(error))
 
@@ -1156,10 +1280,11 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         try:
-            if(await self.config.guild(message.guild).deleteLinks()):
-                if(re.findall(await self.config.guild(message.guild).linkPattern(), message.content) != []):
-                    embedLog.description=f"Links sind auf **{message.guild.name}** verboten"
-                    await message.author.send(embed=embedLog)
-                    await message.delete()
+            if(message.author.bot is None):
+                if(await self.config.guild(message.guild).deleteLinks()):
+                    if(re.findall(await self.config.guild(message.guild).linkPattern(), message.content) != []):
+                        embedLog.description=f"Links sind auf **{message.guild.name}** verboten"
+                        await message.author.send(embed=embedLog)
+                        await message.delete()
         except Exception as error:
             print("Fehler in on_message: " + str(error))
