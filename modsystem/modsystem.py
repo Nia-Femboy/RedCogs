@@ -105,7 +105,7 @@ class Modsystem(commands.Cog):
                 case "uChannel":
 
                     await self.config.guild(interaction.guild).updateLogChannel.set(channel.id)
-                    embedSuccess.add_field(name="Client-Update Log Channel", value=f"<#{chachannel.idnnel}>")
+                    embedSuccess.add_field(name="Client-Update Log Channel", value=f"<#{channel.id}>")
 
                 case "jChannel":
 
@@ -529,6 +529,7 @@ class Modsystem(commands.Cog):
     @app_commands.checks.cooldown(1, 90)
     async def warn(self, interaction: discord.Interaction, user: discord.Member, reason: str, stufe: int = None):
         try:
+            await interaction.response.defer(ephemeral=True)
             if(await self.config.guild(interaction.guild).enableWarn() == False):
                 raise Exception("Die Funktion ist momentan nicht aktiviert")
             if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
@@ -762,12 +763,12 @@ class Modsystem(commands.Cog):
             if(recipientUser is not None):
                 await recipientUser.send(embed=embedDM)
 
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
         except Exception as error:
 
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
-            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            await interaction.followup.send(embed=embedFailure, ephemeral=True)
 
     @modsystem.command(name="setwarnpoints", description="Setze die Warnpoints für einen User")
     @app_commands.describe(user="User", points="Warnpoints")
@@ -792,6 +793,7 @@ class Modsystem(commands.Cog):
     @app_commands.describe(user="User")
     async def showuserstats(self, interaction: discord.Interaction, user: discord.User = None):
         try:
+            await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
                 if(interaction.user != user):
                     if(user is not None):
@@ -829,15 +831,16 @@ class Modsystem(commands.Cog):
                 else:
                     embed.description=f"**Es liegen aktuell keine Daten zu {user.mention} vor**"
                     embed.set_thumbnail(url=user.display_avatar.url)
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
-            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            await interaction.followup.send(embed=embedFailure, ephemeral=True)
             
 
     @modsystem.command(name="showwarnlist", description="Zeige eine List an mit allen Verwarnungen")
     async def showwarnlist(self, interaction: discord.Interaction):
         try:
+            await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
                 raise Exception("Du hast keine Berechtigungen diesen Befehl auszuführen")
             embed = discord.Embed(color=0xfc7f03)
@@ -866,15 +869,16 @@ class Modsystem(commands.Cog):
                     embedList.append(embed.copy())
             embed.description = listString
             embedList.append(embed.copy())
-            await interaction.response.send_message(embeds=embedList, ephemeral=True)
+            await interaction.followup.send(embeds=embedList, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
-            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            await interaction.followup.send(embed=embedFailure, ephemeral=True)
 
     @app_commands.command(name="softban", description="Softbanne einen User")
     @app_commands.describe(user="Der User der einen Softban bekommen soll")
     async def softban(self, interaction: discord.Interaction, user: discord.Member):
         try:
+            await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
                 raise Exception("Du hast keine Berechtigung für diesen Befehl")
             elif(interaction.user.top_role.position <= user.top_role.position):
@@ -883,7 +887,6 @@ class Modsystem(commands.Cog):
                 raise Exception("Kein gültiger Channel gesetzt")
             elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned')):
                 raise Exception("Dieser User ist bereits im Softban")
-            await interaction.response.defer(ephemeral=True)
             sbChannel = await self.config.guild(interaction.guild).softBanChannel()
             overwriteHide = discord.PermissionOverwrite()
             overwriteShow = discord.PermissionOverwrite()
@@ -905,19 +908,19 @@ class Modsystem(commands.Cog):
             await interaction.followup.send(embed=embedLog)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
-            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            await interaction.followup.send(embed=embedFailure, ephemeral=True)
 
     @app_commands.command(name="revokesoftban", description="Nimmt den Softban wieder zurück")
     @app_commands.describe(user="Der User bei dem der Softban wieder zurück genommen werden soll")
     async def revokesoftban(self, interaction: discord.Interaction, user: discord.User):
         try:
+            await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
                 raise Exception("Du hast keine Berechtigung für diesen Befehl")
             elif(interaction.user.top_role.position <= user.top_role.position):
                 raise Exception("Du kannst keinen User mit einem höheren oder gleichen Rang Softbannen")
             elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned') == False):
                 raise Exception("Dieser User hat aktuell keinen Softban")
-            await interaction.response.defer(ephemeral=True)
             for channel in interaction.guild.channels:
                 await channel.set_permissions(user, overwrite=None)
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=False)
@@ -931,7 +934,7 @@ class Modsystem(commands.Cog):
             await interaction.followup.send(embed=embedLog)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
-            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            await interaction.followup.send(embed=embedFailure, ephemeral=True)
             
     @app_commands.command()
     @app_commands.describe()
@@ -1025,8 +1028,8 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry):
         try:
-            if(entry.action == discord.AuditLogAction.kick and await self.config.guild(entry.guild).enableKickLog() == 1):
-                if(await self.config.guild(entry.guild).useGeneralLogChannel() == True):
+            if(entry.action == discord.AuditLogAction.kick and await self.config.guild(entry.guild).enableKickLog()):
+                if(await self.config.guild(entry.guild).useGeneralLogChannel()):
                     channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
                 else:
                     channel = entry.guild.get_channel(await self.config.guild(entry.guild).kickLogChannel())
@@ -1035,8 +1038,8 @@ class Modsystem(commands.Cog):
                 else:
                     embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " ohne Angabe von Gründen gekickt"
                 await channel.send(embed=embedLog)
-            elif(entry.action == discord.AuditLogAction.ban and await self.config.guild(entry.guild).enableBanLog() == 1):
-                if(await self.config.guild(entry.guild).useGeneralLogChannel() == True):
+            elif(entry.action == discord.AuditLogAction.ban and await self.config.guild(entry.guild).enableBanLog()):
+                if(await self.config.guild(entry.guild).useGeneralLogChannel()):
                     channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
                 else:
                     channel = entry.guild.get_channel(await self.config.guild(entry.guild).banLogChannel())
@@ -1045,8 +1048,8 @@ class Modsystem(commands.Cog):
                 else:
                     embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " ohne Angabe von Gründen gebant"
                 await channel.send(embed=embedLog)
-            elif(entry.action == discord.AuditLogAction.member_update and await self.config.guild(entry.guild).enableUpdateLog() == 1):
-                if(await self.config.guild(entry.guild).useGeneralLogChannel() == True):
+            elif(entry.action == discord.AuditLogAction.member_update and await self.config.guild(entry.guild).enableUpdateLog()):
+                if(await self.config.guild(entry.guild).useGeneralLogChannel()):
                     channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
                 else:
                     channel = entry.guild.get_channel(await self.config.guild(entry.guild).updateLogChannel())
