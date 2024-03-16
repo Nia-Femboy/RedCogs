@@ -876,6 +876,7 @@ class Modsystem(commands.Cog):
                     embed.description = listString
                     embedList.append(embed.copy())
                     await interaction.followup.send(embeds=embedList, ephemeral=True)
+                    embedList.clear()
             embed.description = listString
             embedList.append(embed.copy())
             await interaction.followup.send(embeds=embedList, ephemeral=True)
