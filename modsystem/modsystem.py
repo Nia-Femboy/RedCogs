@@ -44,6 +44,7 @@ class Modsystem(commands.Cog):
             warnDynamicResetCount=0,
             warnResetTime=0,
             warnUseChannel=False,
+            warnPublicChannel=0,
             warnUseDM=True,
             modRole=0,
             warnFirstMultiplicator=1,
@@ -71,10 +72,11 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Join Logchannel", value="jChannel"),
         app_commands.Choice(name="Message Logchannel", value="mChannel"),
         app_commands.Choice(name="Softban Channel", value="sbChannel"),
-        app_commands.Choice(name="Softban Logchannel", value="sblChannel")
+        app_commands.Choice(name="Softban Logchannel", value="sblChannel"),
+        app_commands.Choice(name="Warn Public Channel", value="wpChannel")
     ])
     @app_commands.checks.has_permissions(administrator=True)
-    async def setup(self, interaction: discord.Interaction, choice: app_commands.Choice[str], channel: discord.TextChannel):
+    async def setupchannel(self, interaction: discord.Interaction, choice: app_commands.Choice[str], channel: discord.TextChannel):
         try:
 
             if(interaction.guild.get_channel(channel.id) is None):
@@ -138,6 +140,11 @@ class Modsystem(commands.Cog):
 
                     await self.config.guild(interaction.guild).softBanLogChannel.set(channel.id)
                     embedSuccess.add_field(name="Softban Log Channel", value=f"<#{channel.id}>")
+
+                case "wpChannel":
+
+                    await self.config.guild(interaction.guild).warnPublicChannel.set(channel.id)
+                    embedSuccess.add_field(name="Warn Public Channel", value=f"<#{channel.id}>")
 
             if(choice.value == "sbChannel"):
                 await interaction.followup.send(embed=embedSuccess)
@@ -471,6 +478,7 @@ class Modsystem(commands.Cog):
                                f"### Channel:\n"
                                f"Gneral Log-Channel: <#{await self.config.guild(interaction.guild).generalLogChannel()}>\n"
                                f"Warn Log-Channel: <#{await self.config.guild(interaction.guild).warnLogChannel()}>\n"
+                               f"Warn Public Channel: <#{await self.config.guild(interaction.guild).warnPublicChannel()}>\n"
                                f"Kick Log-Channel: <#{await self.config.guild(interaction.guild).kickLogChannel()}>\n"
                                f"Ban Log-Channel: <#{await self.config.guild(interaction.guild).banLogChannel()}>\n"
                                f"Update Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\n"
@@ -531,8 +539,13 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
     @app_commands.command(name="warn", description="Verwarne User")
-    @app_commands.describe(user="Der User der verwarnt werden soll", reason="Grund der Verwarnung", stufe="Die Schwere der Verwarnung 1 - 3 (Optional)")
-    async def warn(self, interaction: discord.Interaction, user: discord.Member, reason: str, stufe: int = None):
+    @app_commands.choices(stufe=([
+        app_commands.Choice(name="Leicht", value=1),
+        app_commands.Choice(name="Mittel", value=2),
+        app_commands.Choice(name="Schwer", value=3)
+    ]))
+    @app_commands.describe(user="Der User der verwarnt werden soll", reason="Grund der Verwarnung", stufe="Die Schwere der Verwarnung (Optional)", timeout="Die länge des Timeout in Minuten (Optional)")
+    async def warn(self, interaction: discord.Interaction, user: discord.Member, reason: str, stufe: app_commands.Choice[int] = 0, timeout: app_commands.Range[int, 1, 40320] = 0):
         try:
             await interaction.response.defer(ephemeral=True)
             if(await self.config.guild(interaction.guild).enableWarn() == False):
@@ -541,234 +554,135 @@ class Modsystem(commands.Cog):
                 raise Exception("Keine Berechtigung diesen Befehl zu nutzen")
             if(interaction.user.top_role.position <= user.top_role.position):
                 raise Exception("Du kannst keine Leute verwarnen die einen höheren oder gleichwertigen Rang haben wie du")
-            # if(user.bot):
-            #     raise Exception("Du kannst keinen Bot verwarnen")
-            embed = discord.Embed(title="Aktion Erfolgreich", color=0x0ffc03)
-            embedDM = discord.Embed(title="!!!Important/Wichtig!!!", color=0xff0000)
-            if(await self.config.guild(interaction.guild).warnUseChannel() and await self.config.guild(interaction.guild).warnUseDM()):
-                recipientChannel = interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnLogChannel()))
-                recipientUser = user
-            elif(await self.config.guild(interaction.guild).warnUseChannel() == False and await self.config.guild(interaction.guild).warnUseDM() == False):
-                embedNotice = discord.Embed(title="Information", description=f"User wird per DM benachrichtigt da weder der Warnchannel noch die DM's aktiviert sind", color=0xfc7f03)
-                interaction.channel.send(embed=embedNotice)
-                recipientChannel = None
-                recipientUser = user
-            elif(await self.config.guild(interaction.guild).warnUseChannel()):
-                recipientChannel = interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnLogChannel()))
-                recipientUser = None
-            elif(await self.config.guild(interaction.guild).warnUseDM()):
-                recipientChannel = None
-                recipientUser = user
-            if(stufe is not None):
-                if(0 > stufe > 3):
-                    raise Exception("Die auszuwählenden Stufen geht von 1 bis 3")
-                else:
-                    match stufe:
-                        case 1:
-                            multiplikator = await self.config.guild(interaction.guild).warnFirstMultiplicator()
-                        case 2:
-                            multiplikator = await self.config.guild(interaction.guild).warnSecondMultiplicator()
-                        case 3:
-                            multiplikator = await self.config.guild(interaction.guild).warnThirdMultiplicator()
-                    currentTime = datetime.now().astimezone(tz=None).strftime('%d-%m-%Y um %H:%M')
-                    if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') == 0 and await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned') == False):
-                        await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
-                                                                                                     'username': user.name,
-                                                                                                     'currentReason': reason,
-                                                                                                     'currentPoints': round(await self.config.guild(interaction.guild).warnWeight() * multiplikator),
-                                                                                                     'totalPoints': round(await self.config.guild(interaction.guild).warnWeight() * multiplikator),
-                                                                                                     'firstWarn': currentTime,
-                                                                                                     'lastWarn': currentTime,
-                                                                                                     'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
-                                                                                                     'kickCount': 0,
-                                                                                                     'softBanned': False,
-                                                                                                     'banned': False})
-                        embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
-                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                           f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                           f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
-                        embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                             f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                             f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                             f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
-                    else:
-                        if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'banned')):
-                            raise Exception("Warn nicht möglich da der User bereits gebannt ist")
-                        currentPoints = await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') + await self.config.guild(interaction.guild).warnWeight() * multiplikator
-                        totalPoints = await self.config.guild(interaction.guild).users.get_raw(user.id, 'totalPoints') + await self.config.guild(interaction.guild).warnWeight() * multiplikator
-                        if(currentPoints < await self.config.guild(interaction.guild).warnKickWeight() or (await self.config.guild(interaction.guild).warnKickWeight() < currentPoints < await self.config.guild(interaction.guild).warnBanWeight())):
-                            await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
-                                                                                                         'username': user.name,
-                                                                                                         'currentReason': reason,
-                                                                                                         'currentPoints': currentPoints,
-                                                                                                         'totalPoints': totalPoints,
-                                                                                                         'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
-                                                                                                         'lastWarn': currentTime,
-                                                                                                         'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
-                                                                                                         'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount'),
-                                                                                                         'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
-                                                                                                         'banned': False})
-                            if(await self.config.guild(interaction.guild).warnKickWeight() - currentPoints < 0):
-                                embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
-                                                   f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                                   f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
-                                                   f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
-                                embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                                     f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                                     f"Anzahl deiner Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
-                                                     f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
-                            else:
-                                embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
-                                                   f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                                   f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - currentPoints}**\n"
-                                                   f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
-                            embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                                 f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
-                        elif(await self.config.guild(interaction.guild).warnKickWeight() <= currentPoints < await self.config.guild(interaction.guild).warnBanWeight()):
-                            await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
-                                                                                                         'username': user.name,
-                                                                                                         'currentReason': reason,
-                                                                                                         'currentPoints': currentPoints,
-                                                                                                         'totalPoints': totalPoints,
-                                                                                                         'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
-                                                                                                         'lastWarn': currentTime,
-                                                                                                         'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
-                                                                                                         'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount') + 1,
-                                                                                                         'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
-                                                                                                         'banned': False})
-                            await user.kick(reason=reason)
-                            embed.description=(f"{user.mention} wurde mit der Begründung **{reason}** gekickt\n\n"
-                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                               f"Kickgrenze: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
-                                               f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
-                            embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** vom Server gekickt\n\n"
-                                                 f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Dies ist dein **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}.** Kick\n"
-                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
-                        elif(currentPoints >= await self.config.guild(interaction.guild).warnBanWeight()):
-                            await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
-                                                                                                         'username': user.name,
-                                                                                                         'currentReason': reason,
-                                                                                                         'currentPoints': currentPoints,
-                                                                                                         'totalPoints': totalPoints,
-                                                                                                         'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
-                                                                                                         'lastWarn': currentTime,
-                                                                                                         'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
-                                                                                                         'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount'),
-                                                                                                         'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
-                                                                                                         'banned': True})
-                            await user.ban(reason=reason, delete_message_days=1)
-                            embed.description=(f"{user.mention} wurde mit der Begründung **{reason}** gebannt\n\n"
-                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                               f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
-                                               f"Bangrenze: **{await self.config.guild(interaction.guild).warnBanWeight()}**")
-                            embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** gebant\n\n")
+            if(user.bot):
+                raise Exception("Du kannst keinen Bot verwarnen")
+            if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'banned')):
+                raise Exception("Warn nicht möglich da der User bereits gebannt ist")
+            if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned')):
+                raise Exception("Warn nicht möglich da der User im Softban ist")
+            embedResponse = discord.Embed(title="Aktion Erfolgreich", color=0x0ffc03)
+            embedPublic = discord.Embed(color=0xfc7f03)
+            embedDM = discord.Embed(title=f"{interaction.guild.name}'s Warnsystem", color=0xff0000)
+            sendPChannel = False
+            sendDMChannel = False
+            if(await self.config.guild(interaction.guild).warnUseChannel()):
+                sendPChannel = True
+            if(await self.config.guild(interaction.guild).warnUseDM()):
+                sendDMChannel = True
+            userAction = "none"
+            currentTime = datetime.now().astimezone(tz=None).strftime('%d-%m-%Y um %H:%M')
+            if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn') == ""):
+                await self.config.guild(interaction.guild).users.set_raw(user.id, 'firstWarn', value=currentTime)
+            if(stufe != 0):
+                match stufe.value:
+                    case 1:
+                        multiplikator = await self.config.guild(interaction.guild).warnFirstMultiplicator()
+                    case 2:
+                        multiplikator = await self.config.guild(interaction.guild).warnSecondMultiplicator()
+                    case 3:
+                        multiplikator = await self.config.guild(interaction.guild).warnThirdMultiplicator()
+                await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
+                                                                                         'username': user.name,
+                                                                                         'currentReason': reason,
+                                                                                         'currentPoints': await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') + round(await self.config.guild(interaction.guild).warnWeight() * multiplikator),
+                                                                                         'totalPoints': await self.config.guild(interaction.guild).users.get_raw(user.id, 'totalPoints') + round(await self.config.guild(interaction.guild).warnWeight() * multiplikator),
+                                                                                         'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
+                                                                                         'lastWarn': currentTime,
+                                                                                         'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
+                                                                                         'kickCount': 0,
+                                                                                         'softBanned': False,
+                                                                                         'banned': False})
+                if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') >= await self.config.guild(interaction.guild).warnKickWeight()):
+                    userAction = "kick"
+                elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') >= await self.config.guild(interaction.guild).warnBanWeight()):
+                    userAction = "ban"
             else:
-                currentTime = datetime.now().astimezone(tz=None).strftime('%d-%m-%Y : %H:%M')
-                if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') == 0 and await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned') == False):
-                    await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
-                                                                                                 'username': user.name,
-                                                                                                 'currentReason': reason,
-                                                                                                 'currentPoints': await self.config.guild(interaction.guild).warnWeight(),
-                                                                                                 'totalPoints': await self.config.guild(interaction.guild).warnWeight(),
-                                                                                                 'firstWarn': currentTime,
-                                                                                                 'lastWarn': currentTime,
-                                                                                                 'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
-                                                                                                 'kickCount': 0,
-                                                                                                 'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
-                                                                                                 'banned': False})
-                    embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
-                                       f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                       f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                       f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
-                    embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
+                currentPoints = await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') + await self.config.guild(interaction.guild).warnWeight()
+                totalPoints = await self.config.guild(interaction.guild).users.get_raw(user.id, 'totalPoints') + await self.config.guild(interaction.guild).warnWeight()
+                await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
+                                                                                                         'username': user.name,
+                                                                                                         'currentReason': reason,
+                                                                                                         'currentPoints': currentPoints,
+                                                                                                         'totalPoints': totalPoints,
+                                                                                                         'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
+                                                                                                         'lastWarn': currentTime,
+                                                                                                         'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
+                                                                                                         'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount'),
+                                                                                                         'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
+                                                                                                         'banned': False})
+                if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') >= await self.config.guild(interaction.guild).warnKickWeight()):
+                    userAction = "kick"
+                elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') >= await self.config.guild(interaction.guild).warnBanWeight()):
+                    userAction = "ban"
+            match userAction:
+                case "none":
+                    embedResponse.description=(f"{user.mention} wurde erfolgreich verwarnt\n\n"
+                                               f"Begründung: **{reason}**\n"
+                                               f"Timeout: **{timeout} Minuten**\n"
+                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                               f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                               f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
+                    embedLog.description=(f"{user.mention} wurde von {interaction.user.mention} verwarnt\n\n"
+                                          f"Begründung: **{reason}**\n"
+                                          f"Timeout: **{timeout} Minuten**\n"
+                                          f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                          f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                          f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
+                    embedPublic.description=(f"## Verwarnung\n"
+                                             f"{user.mention} **wurde verwarnt**\n"
+                                             f"### Begründung:\n"
+                                             f"**{reason}**")
+                    embedDM.description=(f"Du wurdest gerade von **{interaction.user.display_name}** verwarnt\n\n"
+                                         f"Begründung: **{reason}**\n"
+                                         f"Timeout: **{timeout} Minuten**\n"
                                          f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                          f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                          f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
-                else:
-                    if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'banned')):
-                        raise Exception("Warn nicht möglich da der User bereits gebant ist")
-                    currentPoints = await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') + await self.config.guild(interaction.guild).warnWeight()
-                    totalPoints = await self.config.guild(interaction.guild).users.get_raw(user.id, 'totalPoints') + await self.config.guild(interaction.guild).warnWeight()
-                    if(currentPoints < await self.config.guild(interaction.guild).warnKickWeight() or (await self.config.guild(interaction.guild).warnKickWeight() < currentPoints < await self.config.guild(interaction.guild).warnBanWeight())):
-                        await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
-                                                                                                     'username': user.name,
-                                                                                                     'currentReason': reason,
-                                                                                                     'currentPoints': currentPoints,
-                                                                                                     'totalPoints': totalPoints,
-                                                                                                     'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
-                                                                                                     'lastWarn': currentTime,
-                                                                                                     'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
-                                                                                                     'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount'),
-                                                                                                     'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
-                                                                                                     'banned': False})
-                        if(await self.config.guild(interaction.guild).warnKickWeight() - currentPoints < 0):
-                            embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
+                    if timeout != 0:
+                        timeou_until = datetime.now().astimezone() + timedelta(minutes=timeout)
+                        await user.timeout(timeou_until, reason=reason)
+                case "kick":
+                    await user.kick(reason=reason)
+                    embedResponse.description=(f"{user.mention} wurde mit der Begründung **{reason}** gekickt\n\n"
+                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                               f"Kickgrenze: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
+                                               f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
+                    embedLog.description=(f"{user.mention} wurde mit der Begründung **{reason}** gekickt\n\n"
+                                          f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                          f"Kickgrenze: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
+                                          f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
+                    embedPublic.description=(f"## Verwarnung\n"
+                                             f"{user.mention} wurde wegen zu vielen Verwarnungen gekickt\n"
+                                             f"### Begründung:\n"
+                                             f"**{reason}**")
+                    embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** vom Server gekickt\n\n"
+                                         f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                         f"Dies ist dein **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}.** Kick\n"
+                                         f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
+                case "ban":
+                    await user.ban(reason=reason, delete_message_days=1)
+                    embedResponse.description=(f"{user.mention} wurde mit der Begründung **{reason}** gebannt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
-                                               f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
-                            embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                                 f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Anzahl deiner Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
-                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
-                        else:
-                            embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
-                                               f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                               f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - currentPoints}**\n"
-                                               f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
-                            embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** Verwarnt\n\n"
-                                                 f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                                 f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
-                    elif(await self.config.guild(interaction.guild).warnKickWeight() <= currentPoints < await self.config.guild(interaction.guild).warnBanWeight()):
-                        await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
-                                                                                                     'username': user.name,
-                                                                                                     'currentReason': reason,
-                                                                                                     'currentPoints': currentPoints,
-                                                                                                     'totalPoints': totalPoints,
-                                                                                                     'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
-                                                                                                     'lastWarn': currentTime,
-                                                                                                     'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
-                                                                                                     'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount') + 1,
-                                                                                                     'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
-                                                                                                     'banned': False})
-                        await user.kick(reason=reason)
-                        embed.description=(f"{user.mention} wurde mit der Begründung **{reason}** gekickt\n\n"
-                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                           f"Kickgrenze: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
-                                           f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
-                        embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** vom Server gekickt\n\n"
-                                             f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                             f"Dies ist dein **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}.** Kick\n"
-                                             f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
-                    elif(currentPoints >= await self.config.guild(interaction.guild).warnBanWeight()):
-                        await self.config.guild(interaction.guild).users.set_raw(user.id, value={'displayName': user.display_name,
-                                                                                                     'username': user.name,
-                                                                                                     'currentReason': reason,
-                                                                                                     'currentPoints': currentPoints,
-                                                                                                     'totalPoints': totalPoints,
-                                                                                                     'firstWarn': await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn'),
-                                                                                                     'lastWarn': currentTime,
-                                                                                                     'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
-                                                                                                     'kickCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount'),
-                                                                                                     'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
-                                                                                                     'banned': True})
-                        await user.ban(reason=reason, delete_message_days=1)
-                        embed.description=(f"{user.mention} wurde mit der Begründung **{reason}** gebannt\n\n"
-                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
-                                           f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
-                                           f"Bangrenze: **{await self.config.guild(interaction.guild).warnBanWeight()}**")
-                        embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** gebant\n\n")
+                                               f"Bangrenze: **{await self.config.guild(interaction.guild).warnBanWeight()}**")
+                    embedLog.description=embedResponse.description
+                    embedPublic.description=(f"## Verwarnung\n"
+                                             f"{user.mention} wurde wegen zu vielen Verwarnungen gebannt\n"
+                                             f"### Begrpndung\n"
+                                             f"**{reason}**")
+                    embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** gebant\n\n")
                         
-            if(recipientChannel is not None):
-                await recipientChannel.send(embed=embed)
+            if(sendPChannel):
+                await interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnPublicChannel())).send(embed=embedPublic)
 
-            if(recipientUser is not None):
-                await recipientUser.send(embed=embedDM)
-
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            if(sendDMChannel):
+                await user.send(embed=embedDM)
+                
+            if user.avatar is not None:
+                embedLog.set_thumbnail(url=user.avatar.url)
+            await interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnLogChannel())).send(embed=embedLog)
+            embedLog.set_thumbnail(url=None)
+            await interaction.followup.send(embed=embedResponse, ephemeral=True)
 
         except Exception as error:
 
@@ -872,7 +786,7 @@ class Modsystem(commands.Cog):
                     embed.description=listString
                     listString = ""
                     embedList.append(embed.copy())
-                if index % 10 == 0:
+                if index % 30 == 0:
                     embed.description = listString
                     embedList.append(embed.copy())
                     await interaction.followup.send(embeds=embedList, ephemeral=True)
