@@ -190,12 +190,14 @@ class Modsystem(commands.Cog):
                                 Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(interaction.guild).warnResetTime())
                                 if(Modsystem.remove_warn_points.is_running == False):
                                     Modsystem.remove_warn_points.start(self)
+                                    print("Warnsystem aktiviert")
                                 embedSuccess.add_field(name="Aktiviere Warn funktion", value=status)
                             elif(await self.config.guild(interaction.guild).warnDynamicReset() and await self.config.guild(interaction.guild).warnDynamicResetTime() > 0):
                                 await self.config.guild(interaction.guild).enableWarn.set(status)
                                 Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(interaction.guild).warnDynamicResetTime())
                                 if(Modsystem.remove_warn_points.is_running == False):
                                     Modsystem.remove_warn_points.start(self)
+                                    print("Warnsystem aktiviert")
                                 embedSuccess.add_field(name="Aktiviere Warn funktion", value=status)
                             else:
                                 raise Exception("Die Resettime muss größer 0 sein")
@@ -377,6 +379,7 @@ class Modsystem(commands.Cog):
                         raise Exception("Bitte den wert festlegen")
                     if(await self.config.guild(interaction.guild).warnDynamicReset() and await self.config.guild(interaction.guild).enableWarn()):
                         Modsystem.remove_warn_points.change_interval(minutes=int(wert))
+                        print(f"Dynamischer Punkteabbau auf {wert} Minuten gesetzt")
                     await self.config.guild(interaction.guild).warnDynamicResetTime.set(int(wert))
                     embedSuccess.add_field(name="Dynamische reset Zeit", value=int(wert))
 
@@ -500,9 +503,12 @@ class Modsystem(commands.Cog):
                                f"Stufe 3 Multiplikator: **{await self.config.guild(interaction.guild).warnThirdMultiplicator()}**\n"
                                f"### General:\n"
                                f"Nutze den generellen Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n"
-                               f"### Misc:\n"
-                               f"Modrolle: {interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).mention}\n"
-                               f"Link detection pattern: **{await self.config.guild(interaction.guild).linkPattern()}**\n")
+                               f"### Misc:\n")
+            if(interaction.guild.get_role(await self.config.guild(interaction.guild).modRole())):
+                embed.description += (f"Modrolle: {interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).mention}\n")
+            else:
+                embed.description += (f"Modrolle: **Keine gültige Rolle gesetzt**\n")
+            embed.description += (f"Link detection pattern: **{await self.config.guild(interaction.guild).linkPattern()}**\n")
             await interaction.response.send_message(embed=embed)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
@@ -526,7 +532,6 @@ class Modsystem(commands.Cog):
 
     @app_commands.command(name="warn", description="Verwarne User")
     @app_commands.describe(user="Der User der verwarnt werden soll", reason="Grund der Verwarnung", stufe="Die Schwere der Verwarnung 1 - 3 (Optional)")
-    @app_commands.checks.cooldown(1, 90)
     async def warn(self, interaction: discord.Interaction, user: discord.Member, reason: str, stufe: int = None):
         try:
             await interaction.response.defer(ephemeral=True)
@@ -536,8 +541,8 @@ class Modsystem(commands.Cog):
                 raise Exception("Keine Berechtigung diesen Befehl zu nutzen")
             if(interaction.user.top_role.position <= user.top_role.position):
                 raise Exception("Du kannst keine Leute verwarnen die einen höheren oder gleichwertigen Rang haben wie du")
-            if(user.bot):
-                raise Exception("Du kannst keinen Bot verwarnen")
+            # if(user.bot):
+            #     raise Exception("Du kannst keinen Bot verwarnen")
             embed = discord.Embed(title="Aktion Erfolgreich", color=0x0ffc03)
             embedDM = discord.Embed(title="!!!Important/Wichtig!!!", color=0xff0000)
             if(await self.config.guild(interaction.guild).warnUseChannel() and await self.config.guild(interaction.guild).warnUseDM()):
@@ -578,7 +583,7 @@ class Modsystem(commands.Cog):
                                                                                                      'kickCount': 0,
                                                                                                      'softBanned': False,
                                                                                                      'banned': False})
-                        embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
+                        embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
                                            f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                            f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                            f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
@@ -604,7 +609,7 @@ class Modsystem(commands.Cog):
                                                                                                          'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                                          'banned': False})
                             if(await self.config.guild(interaction.guild).warnKickWeight() - currentPoints < 0):
-                                embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
+                                embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
                                                    f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                    f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
                                                    f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
@@ -613,7 +618,7 @@ class Modsystem(commands.Cog):
                                                      f"Anzahl deiner Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
                                                      f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                             else:
-                                embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
+                                embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
                                                    f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                    f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - currentPoints}**\n"
                                                    f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
@@ -674,7 +679,7 @@ class Modsystem(commands.Cog):
                                                                                                  'kickCount': 0,
                                                                                                  'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                                  'banned': False})
-                    embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
+                    embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
                                        f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                        f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                        f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
@@ -700,7 +705,7 @@ class Modsystem(commands.Cog):
                                                                                                      'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                                      'banned': False})
                         if(await self.config.guild(interaction.guild).warnKickWeight() - currentPoints < 0):
-                            embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
+                            embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
                                                f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
@@ -709,7 +714,7 @@ class Modsystem(commands.Cog):
                                                  f"Anzahl deiner Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
                                                  f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                         else:
-                            embed.description=(f"{user.mention} **wurde erfolgreich verwarnt**\n\n"
+                            embed.description=(f"{user.mention} **wurde mit der Begründung {reason} erfolgreich verwarnt**\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - currentPoints}**\n"
                                                f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
@@ -867,6 +872,10 @@ class Modsystem(commands.Cog):
                     embed.description=listString
                     listString = ""
                     embedList.append(embed.copy())
+                if index % 10 == 0:
+                    embed.description = listString
+                    embedList.append(embed.copy())
+                    await interaction.followup.send(embeds=embedList, ephemeral=True)
             embed.description = listString
             embedList.append(embed.copy())
             await interaction.followup.send(embeds=embedList, ephemeral=True)
@@ -1242,12 +1251,14 @@ class Modsystem(commands.Cog):
             for guild in self.bot.guilds:
                 if(await self.config.guild(guild).warnDynamicReset()):
                     for userWarn in await self.config.guild(guild).users():
-                        if(await self.config.guild(guild).users.get_raw(userWarn, 'currentPoints') > 0 and guild.get_member(userWarn) is not None):
+                        if(await self.config.guild(guild).users.get_raw(userWarn, 'currentPoints') > 0 and guild.get_member(int(userWarn)) is not None):
                             await self.config.guild(guild).users.set_raw(userWarn, 'currentPoints', value=await self.config.guild(guild).users.get_raw(userWarn, 'currentPoints') - await self.config.guild(guild).warnDynamicResetCount())
+                            print(f"Dynamische Punkte von {guild.get_member(int(userWarn)).display_name} wurden abgezogen")
                 else:
                     for userWarn in await self.config.guild(guild).users():
                         if(guild.get_member(userWarn) is not None):
                             await self.config.guild(guild).users.set_raw(userWarn, 'currentPoints', value=0)
+                            print("Warnpunkte wurden zurückgesetzt")
         except Exception as error:
             print("Fehler bei Scheduled-Task: " + str(error))
 
@@ -1256,16 +1267,20 @@ class Modsystem(commands.Cog):
             for guild in self.bot.guilds:
                 if(await self.config.guild(guild).enableWarn()):
                     Modsystem.remove_warn_points.start(self)
+                    print("Warnsystem aktiviert")
                     if(await self.config.guild(guild).warnDynamicReset()):
                         Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(guild).warnDynamicResetTime())
+                        print(f"Dynamischer Punkteabbau auf {await self.config.guild(guild).warnDynamicResetTime()} Minuten gesetzt")
                     else:
                         Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(guild).warnResetTime())
+                        print(f"Statischer Punktereset auf {await self.config.guild(guild).warnResetTime()} Minuten gesetzt")
         except Exception as error:
             print("Fehler in cog_load: " + str(error))
 
     async def cog_unload(self):
         try:
             Modsystem.remove_warn_points.cancel()
+            print("Warnsystem deaktiviert")
         except Exception as error:
             print("Fehler in cog_unload: " + str(error))
 
@@ -1275,10 +1290,13 @@ class Modsystem(commands.Cog):
             for guild in self.bot.guilds:
                 if(await self.config.guild(guild).enableWarn()):
                     Modsystem.remove_warn_points.start(self)
+                    print("Warnsystem aktiviert")
                     if(await self.config.guild(guild).warnDynamicReset()):
                         Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(guild).warnDynamicResetTime())
+                        print(f"Dynamischer Punkteabbau auf {await self.config.guild(guild).warnDynamicResetTime()} Minuten gesetzt")
                     else:
                         Modsystem.remove_warn_points.change_interval(minutes=await self.config.guild(guild).warnResetTime())
+                        print(f"Statischer Punktereset auf {await self.config.guild(guild).warnResetTime()} Minuten gesetzt")
         except Exception as error:
             print("Fehler in cog_ready: " + str(error))
 
@@ -1288,7 +1306,7 @@ class Modsystem(commands.Cog):
             if(message.author.bot is None):
                 if(await self.config.guild(message.guild).deleteLinks()):
                     if(re.findall(await self.config.guild(message.guild).linkPattern(), message.content) != []):
-                        embedLog.description=f"Links sind auf **{message.guild.name}** verboten"
+                        embedLog.description=f"Diese inks sind auf **{message.guild.name}** verboten"
                         await message.author.send(embed=embedLog)
                         await message.delete()
         except Exception as error:
