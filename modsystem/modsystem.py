@@ -43,7 +43,7 @@ class Modsystem(commands.Cog):
             warnDynamicResetTime=0,
             warnDynamicResetCount=0,
             warnResetTime=0,
-            warnUseChannel=False,
+            warnUsePublicChannel=False,
             warnPublicChannel=0,
             warnUseDM=True,
             modRole=0,
@@ -337,7 +337,7 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Die Anzahl der Punkte welche bei dem Dynamischen Reset abgezogen werden sollen", value="warnDynamicResetCount"),
         app_commands.Choice(name="Die  Zeit nach der die Warnpunkte zurückgesetzt werden sollen", value="warnResetTime"),
         app_commands.Choice(name="Nutze DM um dem User den Warn mitzuteilen", value="warnUseDM"),
-        app_commands.Choice(name="Nutze einen Logchannel", value="warnUseChannel"),
+        app_commands.Choice(name="Nutze öffentlichen Channel", value="warnUseChannel"),
         app_commands.Choice(name="Multiplikator der 1. Stufe", value="warnFirstMultiplicator"),
         app_commands.Choice(name="Multiplikator der 2. Stufe", value="warnSecondMultiplicator"),
         app_commands.Choice(name="Multiplikator der 3. Stufe", value="warnThirdMultiplicator")
@@ -418,8 +418,8 @@ class Modsystem(commands.Cog):
                     if(activate == None):
                         raise Exception("Bitte activate festlegen")
                     if(activate):
-                        if((interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnLogChannel())) and await self.config.guild(interaction.guild).useGeneralLogChannel() == False) or (interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) and await self.config.guild(interaction.guild).useGeneralLogChannel())):
-                            await self.config.guild(interaction.guild).warnUseChannel.set(activate)
+                        if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnPublicChannel()))):
+                            await self.config.guild(interaction.guild).warnUsePublicChannel.set(activate)
                             embedSuccess.add_field(name="Es wurde folgender Wert gesetzt:", value=activate)
                         else:
                             raise Exception("Kein gültiger Channel festgelegt")
@@ -786,17 +786,23 @@ class Modsystem(commands.Cog):
                     embed.description=listString
                     listString = ""
                     embedList.append(embed.copy())
-                if index % 30 == 0:
-                    embed.description = listString
-                    embedList.append(embed.copy())
-                    await interaction.followup.send(embeds=embedList, ephemeral=True)
-                    embedList.clear()
+                    if index % 30 == 0:
+                        await interaction.followup.send(embeds=embedList, ephemeral=True)
+                        embedList.clear()
             embed.description = listString
             embedList.append(embed.copy())
             await interaction.followup.send(embeds=embedList, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.followup.send(embed=embedFailure, ephemeral=True)
+
+    # @app_commands.command(name="clearuserlist", description="Bereinige die Userliste")
+    # @app_commands.checks.has_permissions(administrator=True)
+    # async def clearuserlist(self, interaction: discord.Interaction):
+    #     try:
+            
+    #     except Exception as error:
+    #         embedFailure.description(f"**Es ist folgender Fehler aufgetreten:**\n\n{error}")
 
     @app_commands.command(name="softban", description="Softbanne einen User")
     @app_commands.describe(user="Der User der einen Softban bekommen soll")
@@ -918,8 +924,8 @@ class Modsystem(commands.Cog):
                                    f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
                                    f"* **/modlog showuserstats [user]**\n"
                                    f" * Zeigt deine aktuellen Warndaten an oder lass dir die von andern anzeigen\n"
-                                   f"* **/warn <user> <reason> [stufe]**\n"
-                                   f" * Verwarne den angegebenen User\n"
+                                   f"* **/warn <user> <reason> [stufe] [timeout]**\n"
+                                   f" * Verwarne den angegebenen User, lege die Scwere fest und gebe ihm einen Timeout\n"
                                    f"* **/softban <user>**\n"
                                    f" * Erteile dem User einen Softban\n"
                                    f"* **/revokesoftban <user>**\n"
@@ -1085,25 +1091,45 @@ class Modsystem(commands.Cog):
                     message_entry.created_at = datetime.now()
                     message_entry.user = data.cached_message.author
                 if(data.cached_message.attachments == [] and data.cached_message.embeds == []):
-                    embedString=(f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n\n"
-                                f"{data.cached_message.content}\n\n\n"
-                                f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
-                                f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
+                    ownSticker = False
+                    if(data.cached_message.stickers):
+                        embedString=f"**Folgender Sticker wurde aus <#{data.channel_id}> gelöscht**\n\n"
+                        for sticker in data.cached_message.stickers:
+                            for gsticker in self.bot.get_guild(data.guild_id).stickers:
+                                if sticker.id == gsticker.id:
+                                    ownSticker = True
+                                    break
+                        if(ownSticker == False):
+                            embedString += f"{data.cached_message.stickers}\n\n"
+                    else:
+                        embedString=(f"**Folgende Nachricht wurde aus <#{data.channel_id}> gelöscht**\n\n"
+                                     f"{data.cached_message.content}\n\n")
+                    if(data.cached_message.reference):
+                        embedString += (f"**Bezieht sich auf:** {data.cached_message.reference.jump_url}\n\n"
+                                        f"> {data.cached_message.reference.cached_message.content}\n\n")
+                    embedString +=(f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
+                                    f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
                     if(data.cached_message.pinned is not None):
                         if(data.cached_message.pinned):
                             embedString += "War die Nachricht gepinnt: **Ja**"
                         else:
                             embedString += "War die Nachricht gepinnt: **Nein**"
                     embedLog.description=embedString
-                    await channel.send(embed=embedLog)
+                    if(ownSticker):
+                        await channel.send(embed=embedLog, stickers=data.cached_message.stickers)
+                    else:
+                        await channel.send(embed=embedLog)
                 elif(data.cached_message.embeds == []):
                     if(len(data.cached_message.attachments) > 1):
                         word = "Folgende Bilder wurden"
                     else:
                         word = "Folgendes Bild wurde"
-                    embedString=(f"**{word} aus <#{data.channel_id}> gelöscht**\n\n"
-                                f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
-                                f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
+                    embedString=f"**{word} aus <#{data.channel_id}> gelöscht**\n\n"
+                    if(data.cached_message.reference):
+                        embedString += (f"**Bezieht sich auf:** {data.cached_message.reference.jump_url}\n\n"
+                                        f"> {data.cached_message.reference.cached_message.content}\n\n")
+                    embedString +=(f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
+                                   f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
                     embedLog.description=embedString
                     await channel.send(embed=embedLog)
                     for pic in data.cached_message.attachments:
