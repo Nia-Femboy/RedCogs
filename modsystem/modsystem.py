@@ -1106,7 +1106,9 @@ class Modsystem(commands.Cog):
                                      f"{data.cached_message.content}\n\n")
                     if(data.cached_message.reference):
                         embedString += (f"**Bezieht sich auf:** {data.cached_message.reference.jump_url}\n\n"
-                                        f"> {data.cached_message.reference.cached_message.content}\n\n")
+                                        f"> {data.cached_message.reference.cached_message.content}\n"
+                                        f"> \n"
+                                        f"> *Geschrieben von* {data.cached_message.reference.cached_message.author.mention}\n\n")
                     embedString +=(f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
                                     f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
                     if(data.cached_message.pinned is not None):
@@ -1127,7 +1129,9 @@ class Modsystem(commands.Cog):
                     embedString=f"**{word} aus <#{data.channel_id}> gelöscht**\n\n"
                     if(data.cached_message.reference):
                         embedString += (f"**Bezieht sich auf:** {data.cached_message.reference.jump_url}\n\n"
-                                        f"> {data.cached_message.reference.cached_message.content}\n\n")
+                                        f"> {data.cached_message.reference.cached_message.content}\n"
+                                        f"> \n"
+                                        f"> *Geschrieben von* {data.cached_message.reference.cached_message.author.mention}\n\n")
                     embedString +=(f"Geschrieben von {data.cached_message.author.mention} am **{(data.cached_message.created_at).strftime('%d-%m-%Y')}** um **{(data.cached_message.created_at).replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%H:%M')} Uhr**\n"
                                    f"Gelöscht von {message_entry.user.mention} am **{(message_entry.created_at).strftime('%d-%m-%Y')}** um **{(message_entry.created_at).astimezone(tz=None).strftime('%H:%M')} Uhr**\n")
                     embedLog.description=embedString
