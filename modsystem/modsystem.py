@@ -632,7 +632,7 @@ class Modsystem(commands.Cog):
                                              f"{user.mention} **wurde verwarnt**\n"
                                              f"### Begründung:\n"
                                              f"**{reason}**")
-                    embedDM.description=(f"Du wurdest gerade von **{interaction.user.display_name}** verwarnt\n\n"
+                    embedDM.description=(f"Du wurdest auf {interaction.guild.name} verwarnt\n\n"
                                          f"Begründung: **{reason}**\n"
                                          f"Timeout: **{timeout} Minuten**\n"
                                          f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
@@ -642,11 +642,11 @@ class Modsystem(commands.Cog):
                         timeou_until = datetime.now().astimezone() + timedelta(minutes=timeout)
                         await user.timeout(timeou_until, reason=reason)
                 case "kick":
-                    embedResponse.description=(f"{user.mention} wurde mit der Begründung **{reason}** gekickt\n\n"
+                    embedResponse.description=(f"{user.mention} wurde Verwarnt und mit der Begründung **{reason}** gekickt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                f"Kickgrenze: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
                                                f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
-                    embedLog.description=(f"{user.mention} wurde mit der Begründung **{reason}** gekickt\n\n"
+                    embedLog.description=(f"{user.mention} wurde von {interaction.user.mention} Verwarnt und mit der Begründung **{reason}** gekickt\n\n"
                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                           f"Kickgrenze: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
                                           f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - currentPoints}**\n")
@@ -654,23 +654,27 @@ class Modsystem(commands.Cog):
                                              f"{user.mention} wurde wegen zu vielen Verwarnungen gekickt\n"
                                              f"### Begründung:\n"
                                              f"**{reason}**")
-                    embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** vom Server gekickt\n\n"
+                    embedDM.description=(f"Du wurdest gerade auf Grund von mehreren Verwarnungen mit der Begründung **{reason}** vom Server gekickt\n\n"
                                          f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                          f"Dies ist dein **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}.** Kick\n"
                                          f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
                     await user.kick(reason=reason)
                 case "ban":
-                    embedResponse.description=(f"{user.mention} wurde mit der Begründung **{reason}** gebannt\n\n"
+                    embedResponse.description=(f"{user.mention} wurde Verwarnt und mit der Begründung **{reason}** gebannt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
                                                f"Bangrenze: **{await self.config.guild(interaction.guild).warnBanWeight()}**")
-                    embedLog.description=embedResponse.description
+                    embedLog.description=(f"{user.mention} wurde von {interaction.user.mention} Verwarnt und mit der Begründung **{reason}** gebannt\n\n"
+                                          f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
+                                          f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
+                                          f"Bangrenze: **{await self.config.guild(interaction.guild).warnBanWeight()}**")
                     embedPublic.description=(f"## Verwarnung\n"
                                              f"{user.mention} wurde wegen zu vielen Verwarnungen gebannt\n"
                                              f"### Begrpndung\n"
                                              f"**{reason}**")
-                    embedDM.description=(f"Du wurdest gerade von {interaction.user.display_name} mit der Begründung **{reason}** gebant\n\n")
+                    embedDM.description=(f"Du wurdest gerade von {interaction.guild.name} wegen zu vielen Verwarnungen mit der Begründung **{reason}** gebannt\n\n")
                     await user.ban(reason=reason, delete_message_days=1)
+  
             if(sendPChannel):
                 await interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnPublicChannel())).send(embed=embedPublic)
 
