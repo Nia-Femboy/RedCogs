@@ -590,7 +590,7 @@ class Modsystem(commands.Cog):
                                                                                          'lastWarn': currentTime,
                                                                                          'warnCount': await self.config.guild(interaction.guild).users.get_raw(user.id, 'warnCount') + 1,
                                                                                          'kickCount': 0,
-                                                                                         'softBanned': False,
+                                                                                         'softBanned': await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned'),
                                                                                          'banned': False})
                 if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints') >= await self.config.guild(interaction.guild).warnKickWeight()):
                     userAction = "kick"
