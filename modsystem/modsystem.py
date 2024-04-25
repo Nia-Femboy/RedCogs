@@ -733,7 +733,6 @@ class Modsystem(commands.Cog):
             timeout = "Kein Timeout"
             if(user.timed_out_until is not None):
                 timeout = "Bis um " + user.timed_out_until.astimezone(tz=None).strftime("%H:%M - %d.%m.%Y")
-            print(timeout)
             if(user is None):
                 if(dict(await self.config.guild(interaction.guild).users()).get(str(interaction.user.id)) is not None):
                     currentUserRecord = await self.config.guild(interaction.guild).users.get_raw(interaction.user.id)
