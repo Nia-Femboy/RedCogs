@@ -1,0 +1,17 @@
+{
+    "author": [
+        "Nia"
+    ],
+    "install_msg": "Commandcount wurde erfolgreich installiert",
+    "name": "Modsystem",
+    "short": "Mit diesem Cog ist es möglich zu zählen wie oft ein User einen Command benutzt hat",
+    "description": "Es wird geloggt wie oft ein User einen Command benutzt hat und welchen Rang er hat",
+    "tags": [
+        "count",
+        "leaderboard",
+        "log"
+    ],
+    "requirements": [
+        "pillow"
+    ]
+}

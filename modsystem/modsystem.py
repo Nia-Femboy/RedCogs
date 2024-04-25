@@ -516,8 +516,8 @@ class Modsystem(commands.Cog):
                 embed.description += (f"Modrolle: {interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).mention}\n")
             else:
                 embed.description += (f"Modrolle: **Keine gültige Rolle gesetzt**\n")
-            embed.description += (f"Link detection pattern: **{await self.config.guild(interaction.guild).linkPattern()}**\n")
-            await interaction.response.send_message(embed=embed)
+            embed.description += (f"Link detection pattern: `{await self.config.guild(interaction.guild).linkPattern()}`")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
@@ -642,7 +642,6 @@ class Modsystem(commands.Cog):
                         timeou_until = datetime.now().astimezone() + timedelta(minutes=timeout)
                         await user.timeout(timeou_until, reason=reason)
                 case "kick":
-                    await user.kick(reason=reason)
                     embedResponse.description=(f"{user.mention} wurde Verwarnt und mit der Begründung **{reason}** gekickt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                f"Kickgrenze: **{await self.config.guild(interaction.guild).warnKickWeight()}**\n"
@@ -659,8 +658,8 @@ class Modsystem(commands.Cog):
                                          f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                          f"Dies ist dein **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}.** Kick\n"
                                          f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
+                    await user.kick(reason=reason)
                 case "ban":
-                    await user.ban(reason=reason, delete_message_days=1)
                     embedResponse.description=(f"{user.mention} wurde Verwarnt und mit der Begründung **{reason}** gebannt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                                f"Anzahl der Kicks: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}**\n"
@@ -674,7 +673,8 @@ class Modsystem(commands.Cog):
                                              f"### Begrpndung\n"
                                              f"**{reason}**")
                     embedDM.description=(f"Du wurdest gerade von {interaction.guild.name} wegen zu vielen Verwarnungen mit der Begründung **{reason}** gebannt\n\n")
-                        
+                    await user.ban(reason=reason, delete_message_days=1)
+  
             if(sendPChannel):
                 await interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnPublicChannel())).send(embed=embedPublic)
 
@@ -725,6 +725,7 @@ class Modsystem(commands.Cog):
                 if(dict(await self.config.guild(interaction.guild).users()).get(str(interaction.user.id)) is not None):
                     currentUserRecord = await self.config.guild(interaction.guild).users.get_raw(interaction.user.id)
                     ban = "Ja" if currentUserRecord.get("banned") == True else "Nein"
+                    softbann = "Ja" if currentUserRecord.get("softBanned") == True else "Nein"
                     embed.description=(f"**Es ist aktuell folgendes von {interaction.user.mention} gespeichert:**\n\n"
                                        f"Begründung des letzten Warns: **{currentUserRecord.get('currentReason')}**\n"
                                        f"Aktuelle Punkte: **{currentUserRecord.get('currentPoints')}**\n"
@@ -732,6 +733,7 @@ class Modsystem(commands.Cog):
                                        f"Erster Warn am **{currentUserRecord.get('firstWarn')}** erhalten\n"
                                        f"Letzter Warn am **{currentUserRecord.get('lastWarn')}** erhalten\n"
                                        f"Anzahl an Kicks durch Warns: **{currentUserRecord.get('kickCount')}**\n"
+                                       f"Softbann: **{softbann}**\n"
                                        f"User gebannt: **{ban}**")
                     embed.set_thumbnail(url=interaction.user.display_avatar.url)
                 else:
@@ -741,6 +743,7 @@ class Modsystem(commands.Cog):
                 if(dict(await self.config.guild(interaction.guild).users()).get(str(user.id)) is not None):
                     currentUserRecord = await self.config.guild(interaction.guild).users.get_raw(user.id)
                     ban = "Ja" if currentUserRecord.get("banned") == True else "Nein"
+                    softbann = "Ja" if currentUserRecord.get("softBanned") == True else "Nein"
                     embed.description=(f"**Es ist aktuell folgendes von {user.mention} gespeichert:**\n\n"
                                     f"Begründung des letzten Warns: **{currentUserRecord.get('currentReason')}**\n"
                                     f"Aktuelle Punkte: **{currentUserRecord.get('currentPoints')}**\n"
@@ -748,6 +751,7 @@ class Modsystem(commands.Cog):
                                     f"Erster Warn am **{currentUserRecord.get('firstWarn')}** erhalten\n"
                                     f"Letzter Warn am **{currentUserRecord.get('lastWarn')}** erhalten\n"
                                     f"Anzahl an Kicks durch Warns: **{currentUserRecord.get('kickCount')}**\n"
+                                    f"Softbann: **{softbann}**\n"
                                     f"User gebannt: **{ban}**")
                     embed.set_thumbnail(url=user.display_avatar.url)
                 else:
@@ -820,16 +824,7 @@ class Modsystem(commands.Cog):
                 raise Exception("Kein gültiger Channel gesetzt")
             elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned')):
                 raise Exception("Dieser User ist bereits im Softban")
-            sbChannel = await self.config.guild(interaction.guild).softBanChannel()
-            overwriteHide = discord.PermissionOverwrite()
-            overwriteShow = discord.PermissionOverwrite()
-            overwriteHide.view_channel=False
-            overwriteShow.view_channel=True
-            for channel in interaction.guild.channels:
-                if(channel.id == sbChannel):
-                    await channel.set_permissions(user, overwrite=overwriteShow)
-                else:
-                    await channel.set_permissions(user, overwrite=overwriteHide)
+            await Modsystem.do_softban(user, interaction.guild.channels, await self.config.guild(interaction.guild).softBanChannel())
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=True)
             await user.send(f"Du hast einen Softban auf **{interaction.guild.name}** bekommen")
             embedLog.description=f"{user.mention} hat von {interaction.user.mention} einen **Softban** bekommen"
@@ -843,6 +838,21 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.followup.send(embed=embedFailure, ephemeral=True)
 
+    async def do_softban(user: discord.user, channels: discord.Guild.channels, jailchannel: int):
+        overwriteHide = discord.PermissionOverwrite()
+        overwriteShow = discord.PermissionOverwrite()
+        overwriteHide.view_channel=False
+        overwriteShow.view_channel=True
+        for channel in channels:
+                if(channel.id == jailchannel):
+                    await channel.set_permissions(user, overwrite=overwriteShow)
+                else:
+                    await channel.set_permissions(user, overwrite=overwriteHide)
+
+    async def undo_softban(user: discord.user, channels: discord.Guild.channels):
+        for channel in channels:
+                await channel.set_permissions(user, overwrite=None)
+
     @app_commands.command(name="revokesoftban", description="Nimmt den Softban wieder zurück")
     @app_commands.describe(user="Der User bei dem der Softban wieder zurück genommen werden soll")
     async def revokesoftban(self, interaction: discord.Interaction, user: discord.User):
@@ -854,8 +864,7 @@ class Modsystem(commands.Cog):
                 raise Exception("Du kannst keinen User mit einem höheren oder gleichen Rang Softbannen")
             elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned') == False):
                 raise Exception("Dieser User hat aktuell keinen Softban")
-            for channel in interaction.guild.channels:
-                await channel.set_permissions(user, overwrite=None)
+            await Modsystem.undo_softban(user, interaction.guild.channels)
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=False)
             await user.send(f"Dein Softban auf **{interaction.guild.name}** wurde zurückgenommen")
             embedLog.description=f"Der **Softban** von {user.mention} wurde von {interaction.user.mention} aufgehoben"
@@ -1010,11 +1019,11 @@ class Modsystem(commands.Cog):
     async def init_user(self, member):
         await self.config.guild(member.guild).users.set_raw(member.id, value={'displayName': member.display_name,
                                                                                   'username': member.name,
-                                                                                  'currentReason': "",
+                                                                                  'currentReason': "-",
                                                                                   'currentPoints': 0,
                                                                                   'totalPoints': 0,
-                                                                                  'firstWarn': "",
-                                                                                  'lastWarn': "",
+                                                                                  'firstWarn': "-",
+                                                                                  'lastWarn': "-",
                                                                                   'warnCount': 0,
                                                                                   'kickCount': 0,
                                                                                   'softBanned': False,
@@ -1030,7 +1039,10 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         try:
-            await Modsystem.init_user(self, member)
+            if(await self.config.guild(member.guild).users.get_raw(member.id) is None):
+                await Modsystem.init_user(self, member)
+            if(await self.config.guild(member.guild).users.get_raw(member.id, 'softBanned')):
+                await Modsystem.do_softban(member, member.guild.channels, await self.config.guild(member.guild).softBanChannel())
             if(await self.config.guild(member.guild).enableJoinLog()):
                 if(await self.config.guild(member.guild).useGeneralLogChannel() == True):
                     channel = member.guild.get_channel(await self.config.guild(member.guild).generalLogChannel())
