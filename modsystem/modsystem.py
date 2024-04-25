@@ -732,7 +732,7 @@ class Modsystem(commands.Cog):
             embed = discord.Embed(title=f"Hier sind die aktuellen Daten", color=0xfc7f03)
             timeout = "Kein Timeout"
             if(user.timed_out_until is not None):
-                timeout = "Bis um " + user.timed_out_until.astimezone(tz=None).strftime("%H:%M - %d.%m.%Y")
+                timeout = "Bis um " + user.timed_out_until.astimezone(tz=None).strftime("%H:%M Uhr am %d.%m.%Y")
             if(user is None):
                 if(dict(await self.config.guild(interaction.guild).users()).get(str(interaction.user.id)) is not None):
                     currentUserRecord = await self.config.guild(interaction.guild).users.get_raw(interaction.user.id)
