@@ -15,6 +15,8 @@ embedSuccess = discord.Embed(title="Erfolgreich", description="Es wurden folgend
 embedFailure = discord.Embed(title="Fehler", color=0xff0000)
 embedLog = discord.Embed(title="Logsystem", color=0xfc7f03)
 
+deleteMessageEvent = True
+
 class Modsystem(commands.Cog):
 
     def __init__(self, bot):
@@ -571,7 +573,7 @@ class Modsystem(commands.Cog):
                 sendDMChannel = True
             userAction = "none"
             currentTime = datetime.now().astimezone(tz=None).strftime('%d-%m-%Y um %H:%M')
-            if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn') == ""):
+            if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'firstWarn') == "-"):
                 await self.config.guild(interaction.guild).users.set_raw(user.id, 'firstWarn', value=currentTime)
             if(stufe != 0):
                 match stufe.value:
@@ -628,7 +630,7 @@ class Modsystem(commands.Cog):
                                           f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                           f"Fehlende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                           f"Fehlende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
-                    embedPublic.description=(f"## Verwarnung\n"
+                    embedPublic.description=(f"## Modsystem\n"
                                              f"{user.mention} **wurde verwarnt**\n"
                                              f"### Begründung:\n"
                                              f"**{reason}**")
@@ -639,8 +641,11 @@ class Modsystem(commands.Cog):
                                          f"Verbleibende Punkte bis zum Kick: **{await self.config.guild(interaction.guild).warnKickWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                          f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                     if timeout != 0:
-                        timeou_until = datetime.now().astimezone() + timedelta(minutes=timeout)
-                        await user.timeout(timeou_until, reason=reason)
+                        timeout_until = datetime.now().astimezone() + timedelta(minutes=timeout)
+                        global deleteMessageEvent
+                        deleteMessageEvent = False
+                        await user.timeout(timeout_until, reason=reason)
+                        deleteMessageEvent = True
                 case "kick":
                     embedResponse.description=(f"{user.mention} wurde Verwarnt und mit der Begründung **{reason}** gekickt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
@@ -658,7 +663,9 @@ class Modsystem(commands.Cog):
                                          f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                          f"Dies ist dein **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}.** Kick\n"
                                          f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
+                    deleteMessageEvent = False
                     await user.kick(reason=reason)
+                    deleteMessageEvent = True
                 case "ban":
                     embedResponse.description=(f"{user.mention} wurde Verwarnt und mit der Begründung **{reason}** gebannt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
@@ -673,7 +680,9 @@ class Modsystem(commands.Cog):
                                              f"### Begrpndung\n"
                                              f"**{reason}**")
                     embedDM.description=(f"Du wurdest gerade von {interaction.guild.name} wegen zu vielen Verwarnungen mit der Begründung **{reason}** gebannt\n\n")
+                    deleteMessageEvent = False
                     await user.ban(reason=reason, delete_message_days=1)
+                    deleteMessageEvent = True
   
             if(sendPChannel):
                 await interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnPublicChannel())).send(embed=embedPublic)
@@ -713,7 +722,7 @@ class Modsystem(commands.Cog):
 
     @modsystem.command(name="showuserstats", description="Zeigt die aktuellen Daten für einen User oder dich selbst an")
     @app_commands.describe(user="User")
-    async def showuserstats(self, interaction: discord.Interaction, user: discord.User = None):
+    async def showuserstats(self, interaction: discord.Interaction, user: discord.Member = None):
         try:
             await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
@@ -721,6 +730,10 @@ class Modsystem(commands.Cog):
                     if(user is not None):
                         raise Exception("Du darfst dir nur deine Eigenen Daten anschauen")
             embed = discord.Embed(title=f"Hier sind die aktuellen Daten", color=0xfc7f03)
+            timeout = "Kein Timeout"
+            if(user.timed_out_until is not None):
+                timeout = "Bis um " + user.timed_out_until.astimezone(tz=None).strftime("%H:%M - %d.%m.%Y")
+            print(timeout)
             if(user is None):
                 if(dict(await self.config.guild(interaction.guild).users()).get(str(interaction.user.id)) is not None):
                     currentUserRecord = await self.config.guild(interaction.guild).users.get_raw(interaction.user.id)
@@ -733,6 +746,7 @@ class Modsystem(commands.Cog):
                                        f"Erster Warn am **{currentUserRecord.get('firstWarn')}** erhalten\n"
                                        f"Letzter Warn am **{currentUserRecord.get('lastWarn')}** erhalten\n"
                                        f"Anzahl an Kicks durch Warns: **{currentUserRecord.get('kickCount')}**\n"
+                                       f"Timeout: **{timeout}**\n"
                                        f"Softbann: **{softbann}**\n"
                                        f"User gebannt: **{ban}**")
                     embed.set_thumbnail(url=interaction.user.display_avatar.url)
@@ -751,6 +765,7 @@ class Modsystem(commands.Cog):
                                     f"Erster Warn am **{currentUserRecord.get('firstWarn')}** erhalten\n"
                                     f"Letzter Warn am **{currentUserRecord.get('lastWarn')}** erhalten\n"
                                     f"Anzahl an Kicks durch Warns: **{currentUserRecord.get('kickCount')}**\n"
+                                    f"Timeout: **{timeout}**\n"
                                     f"Softbann: **{softbann}**\n"
                                     f"User gebannt: **{ban}**")
                     embed.set_thumbnail(url=user.display_avatar.url)
@@ -970,44 +985,45 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry):
         try:
-            if(entry.action == discord.AuditLogAction.kick and await self.config.guild(entry.guild).enableKickLog()):
-                if(await self.config.guild(entry.guild).useGeneralLogChannel()):
-                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
-                else:
-                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).kickLogChannel())
-                if(entry.reason is not None):
-                    embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " mit der Begründung **" + entry.reason + "** gekickt"
-                else:
-                    embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " ohne Angabe von Gründen gekickt"
-                await channel.send(embed=embedLog)
-            elif(entry.action == discord.AuditLogAction.ban and await self.config.guild(entry.guild).enableBanLog()):
-                if(await self.config.guild(entry.guild).useGeneralLogChannel()):
-                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
-                else:
-                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).banLogChannel())
-                if(entry.reason is not None):
-                    embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " mit der Begründung **" + entry.reason + "** gebant"
-                else:
-                    embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " ohne Angabe von Gründen gebant"
-                await channel.send(embed=embedLog)
-            elif(entry.action == discord.AuditLogAction.member_update and await self.config.guild(entry.guild).enableUpdateLog()):
-                if(await self.config.guild(entry.guild).useGeneralLogChannel()):
-                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
-                else:
-                    channel = entry.guild.get_channel(await self.config.guild(entry.guild).updateLogChannel())
-                if(entry.after.timed_out_until is not None):
-                    timeout_time = str(timedelta(seconds=round((entry.after.timed_out_until - datetime.now(entry.after.timed_out_until.tzinfo)).total_seconds())))
-                    if(entry.reason is not None):
-                        embedLog.description=entry.target.mention + " hat von " + entry.user.mention + " einen Timeout für **" + timeout_time + "** mit der Begründung **" + entry.reason + "** bekommen"
+            if(deleteMessageEvent):
+                if(entry.action == discord.AuditLogAction.kick and await self.config.guild(entry.guild).enableKickLog()):
+                    if(await self.config.guild(entry.guild).useGeneralLogChannel()):
+                        channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
                     else:
-                        embedLog.description=entry.target.mention + " hat von " + entry.user.mention + " ohne Angabe von Gründen einen Timeout für **" + timeout_time + "** bekommen"
+                        channel = entry.guild.get_channel(await self.config.guild(entry.guild).kickLogChannel())
+                    if(entry.reason is not None):
+                        embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " mit der Begründung **" + entry.reason + "** gekickt"
+                    else:
+                        embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " ohne Angabe von Gründen gekickt"
                     await channel.send(embed=embedLog)
-                elif(entry.after.timed_out_until is None):
-                    timeout_time = str(timedelta(seconds=round((entry.before.timed_out_until - datetime.now(entry.before.timed_out_until.tzinfo)).total_seconds())))
-                    embedLog.description=entry.user.mention + " hat den Timeout von " + entry.target.mention + "aufgehoben"
-                    embedLog.add_field(name="Verbleibende Zeit", value=timeout_time, inline=True)
+                elif(entry.action == discord.AuditLogAction.ban and await self.config.guild(entry.guild).enableBanLog()):
+                    if(await self.config.guild(entry.guild).useGeneralLogChannel()):
+                        channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
+                    else:
+                        channel = entry.guild.get_channel(await self.config.guild(entry.guild).banLogChannel())
+                    if(entry.reason is not None):
+                        embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " mit der Begründung **" + entry.reason + "** gebant"
+                    else:
+                        embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " ohne Angabe von Gründen gebant"
                     await channel.send(embed=embedLog)
-                    embedLog.clear_fields()
+                elif(entry.action == discord.AuditLogAction.member_update and await self.config.guild(entry.guild).enableUpdateLog()):
+                    if(await self.config.guild(entry.guild).useGeneralLogChannel()):
+                        channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
+                    else:
+                        channel = entry.guild.get_channel(await self.config.guild(entry.guild).updateLogChannel())
+                    if(entry.after.timed_out_until is not None):
+                        timeout_time = str(timedelta(seconds=round((entry.after.timed_out_until - datetime.now(entry.after.timed_out_until.tzinfo)).total_seconds())))
+                        if(entry.reason is not None):
+                            embedLog.description=entry.target.mention + " hat von " + entry.user.mention + " einen Timeout für **" + timeout_time + "** mit der Begründung **" + entry.reason + "** bekommen"
+                        else:
+                            embedLog.description=entry.target.mention + " hat von " + entry.user.mention + " ohne Angabe von Gründen einen Timeout für **" + timeout_time + "** bekommen"
+                        await channel.send(embed=embedLog)
+                    elif(entry.after.timed_out_until is None):
+                        timeout_time = str(timedelta(seconds=round((entry.before.timed_out_until - datetime.now(entry.before.timed_out_until.tzinfo)).total_seconds())))
+                        embedLog.description=entry.user.mention + " hat den Timeout von " + entry.target.mention + "aufgehoben"
+                        embedLog.add_field(name="Verbleibende Zeit", value=timeout_time, inline=True)
+                        await channel.send(embed=embedLog)
+                        embedLog.clear_fields()
         except Exception as error:
             print("Fehler im Auditlog: " + str(error))
     
