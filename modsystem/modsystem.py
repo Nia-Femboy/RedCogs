@@ -933,7 +933,23 @@ class Modsystem(commands.Cog):
             embedFailure.description(f"**Es ist folgender Fehler aufgetreten:**\n\n{error}")
             await interaction.followup.send(embed=embedFailure, ephemeral=True)
 
-    @modsystem.command(name="help", description="Hilfe zu allen Commands")
+    @app_commands.command(name="getprofilepic", description="Lass dir das aktuelle Profilbild des Users ausgeben")
+    @app_commands.describe(user="Der User dessen Profilbild du haben möchtest")
+    async def getprofilepic(self, interaction: discord.Interaction, user: discord.Member = None):
+        try:
+            if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
+                raise Exception("Keine Berechtigung")
+            if(user is None):
+                user = interaction.user
+            embedLog.description=f"Dies ist der aktuelle Avatar des Users"
+            embedLog.set_image(url=user.display_avatar.url)
+            await interaction.response.send_message(embed=embedLog, ephemeral=True)
+            embedLog.set_image(url=None)
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender Fehler aufgetreten:**\n\n{error}**"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
+    @app_commands.command(name="help", description="Lass dir alle verfügbaren Befehle anzeigen")
     async def help(self, interaction: discord.Interaction):
         try:
             embed = discord.Embed(color=0xfc7f03)
@@ -955,7 +971,9 @@ class Modsystem(commands.Cog):
                                    f"* **/softban <user>**\n"
                                    f" * Erteile dem User einen Softban\n"
                                    f"* **/revokesoftban <user>**\n"
-                                   f" * Nimm den Softban von dem User wieder zurück\n")
+                                   f" * Nimm den Softban von dem User wieder zurück\n"
+                                   f"* **/getprofilepic [user]**\n"
+                                   f" * Lasse dir das Profilbild eines Nutzers ausgeben\n")
                 if(app_commands.checks.has_permissions(administrator=True)):
                     embed.description += (f"### Setup\n"
                                     f"* **/modlog setupchannel <Modul> <ChannelID>**\n"
