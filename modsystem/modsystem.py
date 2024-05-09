@@ -13,7 +13,7 @@ from PIL import Image
 
 embedSuccess = discord.Embed(title="Erfolgreich", description="Es wurden folgende Werte gesetzt:", color=0x0ffc03)
 embedFailure = discord.Embed(title="Fehler", color=0xff0000)
-embedLog = discord.Embed(title="Logsystem", color=0xfc7f03)
+embedLog = discord.Embed(title="Modsystem", color=0xfc7f03)
 
 deleteMessageEvent = True
 
@@ -57,6 +57,7 @@ class Modsystem(commands.Cog):
             deleteLinks=False,
             linkPattern=r"https?:\/\/.*\..{2,}",
             saveDeletedPics=False,
+            enableTimeoutCommand=False,
             users={},
             invites={}
         )
@@ -170,7 +171,8 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Messagelog", value="mLog"),
         app_commands.Choice(name="Voicelog", value="vLog"),
         app_commands.Choice(name="Message Link Detection", value="mLinks"),
-        app_commands.Choice(name="Speichere gelöschte Bilder lokal", value="sdPics")
+        app_commands.Choice(name="Speichere gelöschte Bilder lokal", value="sdPics"),
+        app_commands.Choice(name="Timeout Command", value="tc")
     ])
     @app_commands.checks.has_permissions(administrator=True)
     async def enable(self, interaction: discord.Interaction, choice: app_commands.Choice[str], status: bool):
@@ -320,6 +322,11 @@ class Modsystem(commands.Cog):
 
                     await self.config.guild(interaction.guild).saveDeletedPics.set(status)
                     embedSuccess.add_field(name="Speichere gelöschte Bilder lokal", value=status)
+
+                case "tc":
+
+                    await self.config.guild(interaction.guild).enableTimeoutCommand.set(status)
+                    embedSuccess.add_field(name="Aktiviere Timeout Command", value=status)
 
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
@@ -930,7 +937,7 @@ class Modsystem(commands.Cog):
             embedLog.description=f"Es wurden alle Fehlenden User erfolgreich angelegt"
             await interaction.followup.send(embed=embedLog)
         except Exception as error:
-            embedFailure.description(f"**Es ist folgender Fehler aufgetreten:**\n\n{error}")
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.followup.send(embed=embedFailure, ephemeral=True)
 
     @app_commands.command(name="getprofilepic", description="Lass dir das aktuelle Profilbild des Users ausgeben")
@@ -949,6 +956,26 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"Es ist folgender Fehler aufgetreten:**\n\n{error}**"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
+    @app_commands.command(description="Geb dir oder einem anderen einen Timeout")
+    @app_commands.describe(minutes="Die Minuten wie lange der Timeout sein soll", user="Der User welchen den Timeout bekommen soll (Staff only)", reason="Die Begründung für den  Timeout (Staff only)")
+    async def timeout(self, interaction: discord.Interaction, minutes: app_commands.Range[int, 1, 40320], user: discord.Member = None, reason: str = ""):
+        try:
+            if(await self.config.guild(interaction.guild).enableTimeoutCommand() is not True):
+                raise Exception("Funktion nicht aktiviert")
+            timeout_until = datetime.now().astimezone() + timedelta(minutes=minutes)
+            if(user is not None):
+                if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
+                    raise Exception("Keine Berechtigung anderen einen Timeout zu geben")
+                await user.timeout(timeout_until, reason=reason)
+                embedLog.description=f"{interaction.user.mention} hat {user.mention} einen Timeout von {minutes} Minuten mit der Begründung {reason} gegeben"
+            else:
+                await interaction.user.timeout(timeout_until, reason="Auf eigenen Wunsch")
+                embedLog.description=f"{interaction.user.mention} hat sich selbst einen Timeout von {minutes} Minuten gegeben"
+            await interaction.response.send_message(embed=embedLog, ephemeral=True)
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
     @app_commands.command(name="help", description="Lass dir alle verfügbaren Befehle anzeigen")
     async def help(self, interaction: discord.Interaction):
         try:
@@ -958,7 +985,9 @@ class Modsystem(commands.Cog):
                                    f"* **/modlog showwarnlist**\n"
                                    f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
                                    f"* **/modlog showuserstats**\n"
-                                   f" * Zeigt deine aktuellen Warndaten an\n")
+                                   f" * Zeigt deine aktuellen Warndaten an\n"
+                                   f"* **/timeout <Minuten>**\n"
+                                   f" * Geb dir selbst einen Timeou\n")
             if(interaction.user.top_role.position > interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
                 embed.description=(f"# Hilfemenü\n"
                                    f"### Generelle Befehle\n"
@@ -973,7 +1002,9 @@ class Modsystem(commands.Cog):
                                    f"* **/revokesoftban <user>**\n"
                                    f" * Nimm den Softban von dem User wieder zurück\n"
                                    f"* **/getprofilepic [user]**\n"
-                                   f" * Lasse dir das Profilbild eines Nutzers ausgeben\n")
+                                   f" * Lasse dir das Profilbild eines Nutzers ausgeben\n"
+                                   f"* **/timeout <Minuten> [User] [Begründung]**\n"
+                                   f" * Geb dir selbst oder einem anderen User einen Timeout\n")
                 if(app_commands.checks.has_permissions(administrator=True)):
                     embed.description += (f"### Setup\n"
                                     f"* **/modlog setupchannel <Modul> <ChannelID>**\n"
@@ -1072,7 +1103,7 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         try:
-            if(await self.config.guild(member.guild).users.get_raw(member.id) is None):
+            if(dict(await self.config.guild(member.guild).users()).get((str(member.id))) is None):
                 await Modsystem.init_user(self, member)
             if(await self.config.guild(member.guild).users.get_raw(member.id, 'softBanned')):
                 await Modsystem.do_softban(member, member.guild.channels, await self.config.guild(member.guild).softBanChannel())
