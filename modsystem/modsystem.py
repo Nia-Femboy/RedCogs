@@ -7,6 +7,8 @@ import io
 from discord.utils import MISSING
 from discord.ext import tasks
 
+from common.functions import Functions
+
 from redbot.core import commands, app_commands, Config
 from datetime import datetime, timedelta, timezone
 from PIL import Image
@@ -15,7 +17,7 @@ embedSuccess = discord.Embed(title="Erfolgreich", description="Es wurden folgend
 embedFailure = discord.Embed(title="Fehler", color=0xff0000)
 embedLog = discord.Embed(title="Modsystem", color=0xfc7f03)
 
-deleteMessageEvent = True
+enableEvent = True
 
 class Modsystem(commands.Cog):
 
@@ -58,8 +60,13 @@ class Modsystem(commands.Cog):
             linkPattern=r"https?:\/\/.*\..{2,}",
             saveDeletedPics=False,
             enableTimeoutCommand=False,
+            maxKicksPerMinute=0,
+            maxBansPerMinute=0,
             users={},
-            invites={}
+            invites={},
+            spamProtection={},
+            spamProtectionWhitelistedRoles={},
+            spamProtectionWhitelistedAccounts={}
         )
 
     modsystem = app_commands.Group(name="modlog", description="Modlog setup commands")
@@ -649,10 +656,10 @@ class Modsystem(commands.Cog):
                                          f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                     if timeout != 0:
                         timeout_until = datetime.now().astimezone() + timedelta(minutes=timeout)
-                        global deleteMessageEvent
-                        deleteMessageEvent = False
+                        global enableEvent
+                        enableEvent = False
                         await user.timeout(timeout_until, reason=reason)
-                        deleteMessageEvent = True
+                        enableEvent = True
                 case "kick":
                     embedResponse.description=(f"{user.mention} wurde Verwarnt und mit der Begründung **{reason}** gekickt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
@@ -670,9 +677,9 @@ class Modsystem(commands.Cog):
                                          f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                          f"Dies ist dein **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}.** Kick\n"
                                          f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
-                    deleteMessageEvent = False
+                    enableEvent = False
                     await user.kick(reason=reason)
-                    deleteMessageEvent = True
+                    enableEvent = True
                 case "ban":
                     embedResponse.description=(f"{user.mention} wurde Verwarnt und mit der Begründung **{reason}** gebannt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
@@ -687,9 +694,9 @@ class Modsystem(commands.Cog):
                                              f"### Begrpndung\n"
                                              f"**{reason}**")
                     embedDM.description=(f"Du wurdest gerade von {interaction.guild.name} wegen zu vielen Verwarnungen mit der Begründung **{reason}** gebannt\n\n")
-                    deleteMessageEvent = False
+                    enableEvent = False
                     await user.ban(reason=reason, delete_message_days=1)
-                    deleteMessageEvent = True
+                    enableEvent = True
   
             if(sendPChannel):
                 await interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnPublicChannel())).send(embed=embedPublic)
@@ -904,9 +911,9 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def kick(self, interaction: discord.Interaction, user: discord.Member, reason: str):
         try:
-            if(interaction.user.top_role.position < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
+            if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 user.kick(reason=reason)
-                embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
+                embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
                 await interaction.response.send_message(embed=embedLog, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
@@ -979,6 +986,7 @@ class Modsystem(commands.Cog):
     @app_commands.command(name="help", description="Lass dir alle verfügbaren Befehle anzeigen")
     async def help(self, interaction: discord.Interaction):
         try:
+            await Functions.clear_user(self, interaction.user)
             embed = discord.Embed(color=0xfc7f03)
             embed.description=(f"# Hilfemenü\n"
                                    f"### Generelle Befehle:\n"
@@ -1033,7 +1041,7 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry):
         try:
-            if(deleteMessageEvent):
+            if(enableEvent):
                 if(entry.action == discord.AuditLogAction.kick and await self.config.guild(entry.guild).enableKickLog()):
                     if(await self.config.guild(entry.guild).useGeneralLogChannel()):
                         channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
@@ -1075,30 +1083,30 @@ class Modsystem(commands.Cog):
         except Exception as error:
             print("Fehler im Auditlog: " + str(error))
     
-    async def get_invite_with_code(invite_list, code):
-        for inv in invite_list:
-            if inv.code == code:
-                return inv
+    # async def get_invite_with_code(invite_list, code):
+    #     for inv in invite_list:
+    #         if inv.code == code:
+    #             return inv
             
-    async def init_user(self, member):
-        await self.config.guild(member.guild).users.set_raw(member.id, value={'displayName': member.display_name,
-                                                                                  'username': member.name,
-                                                                                  'currentReason': "-",
-                                                                                  'currentPoints': 0,
-                                                                                  'totalPoints': 0,
-                                                                                  'firstWarn': "-",
-                                                                                  'lastWarn': "-",
-                                                                                  'warnCount': 0,
-                                                                                  'kickCount': 0,
-                                                                                  'softBanned': False,
-                                                                                  'banned': False})
+    # async def init_user(self, member):
+    #     await self.config.guild(member.guild).users.set_raw(member.id, value={'displayName': member.display_name,
+    #                                                                               'username': member.name,
+    #                                                                               'currentReason': "-",
+    #                                                                               'currentPoints': 0,
+    #                                                                               'totalPoints': 0,
+    #                                                                               'firstWarn': "-",
+    #                                                                               'lastWarn': "-",
+    #                                                                               'warnCount': 0,
+    #                                                                               'kickCount': 0,
+    #                                                                               'softBanned': False,
+    #                                                                               'banned': False})
         
-    async def clear_user(self, member):
-        data = await self.config.guild(member.guild).users.get_raw(member.id)
-        timeDiff = datetime.now() - member.joined_at.replace(tzinfo=None)
-        oneDay = timedelta(days=1)
-        if(data.get('warnCount') == 0 and data.get('kickCount') == 0 and data.get('softBanned') == False and data.get('banned') == False and timeDiff <= oneDay ):
-            await self.config.guild(member.guild).users.clear_raw(member.id)
+    # async def clear_user(self, member):
+    #     data = await self.config.guild(member.guild).users.get_raw(member.id)
+    #     timeDiff = datetime.now() - member.joined_at.replace(tzinfo=None)
+    #     oneDay = timedelta(days=1)
+    #     if(data.get('warnCount') == 0 and data.get('kickCount') == 0 and data.get('softBanned') == False and data.get('banned') == False and timeDiff <= oneDay ):
+    #         await self.config.guild(member.guild).users.clear_raw(member.id)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -1151,7 +1159,7 @@ class Modsystem(commands.Cog):
             inviteCode = await self.config.guild(data.user.guild).invites.get_raw(data.user.id, 'invitecode')
             await self.config.guild(data.user.guild).invites.clear_raw(data.user.id)
             await self.config.guild(data.user.guild).invites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).invites.get_raw(inviteCode, 'count') - 1, 'uses': await self.config.guild(data.user.guild).invites.get_raw(inviteCode, 'uses')})
-            await Modsystem.clear_user(self, data.user)
+            await Functions.clear_user(self, data.user)
         except Exception as error:
             print("Fehler bei Member-Remove: " + str(error))
 
