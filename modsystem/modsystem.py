@@ -7,15 +7,17 @@ import io
 from discord.utils import MISSING
 from discord.ext import tasks
 
+from .common.functions import Functions
+
 from redbot.core import commands, app_commands, Config
 from datetime import datetime, timedelta, timezone
 from PIL import Image
 
 embedSuccess = discord.Embed(title="Erfolgreich", description="Es wurden folgende Werte gesetzt:", color=0x0ffc03)
 embedFailure = discord.Embed(title="Fehler", color=0xff0000)
-embedLog = discord.Embed(title="Logsystem", color=0xfc7f03)
+embedLog = discord.Embed(title="Modsystem", color=0xfc7f03)
 
-deleteMessageEvent = True
+enableEvent = True
 
 class Modsystem(commands.Cog):
 
@@ -54,11 +56,20 @@ class Modsystem(commands.Cog):
             warnThirdMultiplicator=1,
             softBanChannel=0,
             softBanLogChannel=0,
+            enableSoftBan=False,
             deleteLinks=False,
             linkPattern=r"https?:\/\/.*\..{2,}",
             saveDeletedPics=False,
+            enableTimeoutCommand=False,
+            maxKicksPerMinute=0,
+            maxBansPerMinute=0,
             users={},
-            invites={}
+            staff={},
+            roles={},
+            invites={},
+            spamProtection={},
+            spamProtectionWhitelistedRoles={},
+            spamProtectionWhitelistedAccounts={}
         )
 
     modsystem = app_commands.Group(name="modlog", description="Modlog setup commands")
@@ -124,18 +135,6 @@ class Modsystem(commands.Cog):
                 case "sbChannel":
 
                     await self.config.guild(interaction.guild).softBanChannel.set(channel.id)
-                    await interaction.response.defer()
-                    overwriteHide = discord.PermissionOverwrite()
-                    overwriteShow = discord.PermissionOverwrite()
-                    overwriteHide.view_channel=False
-                    overwriteShow.view_channel=True
-                    for user in interaction.guild.members:
-                        if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned')):
-                            for dChannel in interaction.guild.channels:
-                                if(dChannel.id == channel.id):
-                                    await dChannel.set_permissions(user, overwrite=overwriteShow)
-                                else:
-                                    await dChannel.set_permissions(user, overwrite=overwriteHide)
                     embedSuccess.add_field(name="Softban Channel", value=f"<#{channel.id}>")
 
                 case "sblChannel":
@@ -169,8 +168,10 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Joinlog", value="jLog"),
         app_commands.Choice(name="Messagelog", value="mLog"),
         app_commands.Choice(name="Voicelog", value="vLog"),
+        app_commands.Choice(name="Softban", value="sban"),
         app_commands.Choice(name="Message Link Detection", value="mLinks"),
-        app_commands.Choice(name="Speichere gelöschte Bilder lokal", value="sdPics")
+        app_commands.Choice(name="Speichere gelöschte Bilder lokal", value="sdPics"),
+        app_commands.Choice(name="Timeout Command", value="tc")
     ])
     @app_commands.checks.has_permissions(administrator=True)
     async def enable(self, interaction: discord.Interaction, choice: app_commands.Choice[str], status: bool):
@@ -311,6 +312,24 @@ class Modsystem(commands.Cog):
                     await self.config.guild(interaction.guild).enableVoiceLog.set(status)
                     embedSuccess.add_field(name="Voice Log", value=status)
 
+                case "sban":
+
+                    await self.config.guild(interaction.guild).enableSoftBan.set(status)
+                    await interaction.response.defer()
+                    if self.config.guild(interaction.guild).users():
+                        overwriteHide = discord.PermissionOverwrite()
+                        overwriteShow = discord.PermissionOverwrite()
+                        overwriteHide.view_channel=False
+                        overwriteShow.view_channel=True
+                        for user in interaction.guild.members:
+                            if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned')):
+                                for dChannel in interaction.guild.channels:
+                                    if(dChannel.id == int(self.config.guild(interaction.guild).softBanChannel())):
+                                        await dChannel.set_permissions(user, overwrite=overwriteShow)
+                                    else:
+                                        await dChannel.set_permissions(user, overwrite=overwriteHide)
+                    embedSuccess.add_field(name="Softban", value=status)
+
                 case "mLinks":
 
                     await self.config.guild(interaction.guild).deleteLinks.set(status)
@@ -320,6 +339,11 @@ class Modsystem(commands.Cog):
 
                     await self.config.guild(interaction.guild).saveDeletedPics.set(status)
                     embedSuccess.add_field(name="Speichere gelöschte Bilder lokal", value=status)
+
+                case "tc":
+
+                    await self.config.guild(interaction.guild).enableTimeoutCommand.set(status)
+                    embedSuccess.add_field(name="Aktiviere Timeout Command", value=status)
 
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
@@ -471,6 +495,39 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure)
 
+    @modsystem.command(name="setupprotection", description="Setup der Nuke Protection")
+    @app_commands.describe(wert="Setze den Entsprechenden Wert")
+    @app_commands.choices(choice=[
+        app_commands.Choice(name="Maximale Timeouts pro Minute", value="maxTimeoutCount"),
+        app_commands.Choice(name="Maximale Kicks pro Minute", value="maxKickCount"),
+        app_commands.Choice(name="Maximale Bans pro Minute", value="maxBanCount")
+    ])
+    @app_commands.checks.has_permissions(administrator=True)
+    async def setupprotection(self, interaction: discord.Interaction, choice: app_commands.Choice[str], wert: int):
+        try:
+            match(wert):
+
+                case "maxTimeoutCount":
+
+                    await self.config.guild(interaction.guild).test
+                    embedSuccess.add_field(name="Max Timeout Coun", value=wert)
+
+                case "maxKickCount":
+
+                    await self.config.guild(interaction.guild).maxKicksPerMinute.set(wert)
+                    embedSuccess.add_field(name="Max Kick Count", value=wert)
+
+                case "maxBanCount":
+
+                    await self.config.guild(interaction.guild).maxBansPerMinute.set(wert)
+                    embedSuccess.add_field(name="Max Ban Count")
+
+            await interaction.response.send_message(embed=embedSuccess)
+            embedSuccess.clear_fields()
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure)
+
     @modsystem.command(name="getconfig", description="Schau dir die aktuelle Config an")
     @app_commands.checks.has_permissions(administrator=True)
     async def showconfig(self, interaction: discord.Interaction):
@@ -511,6 +568,10 @@ class Modsystem(commands.Cog):
                                f"Stufe 1 Multiplikator: **{await self.config.guild(interaction.guild).warnFirstMultiplicator()}**\n"
                                f"Stufe 2 Multiplikator: **{await self.config.guild(interaction.guild).warnSecondMultiplicator()}**\n"
                                f"Stufe 3 Multiplikator: **{await self.config.guild(interaction.guild).warnThirdMultiplicator()}**\n"
+                               f"### Anti-Nuke:\n"
+                               f"Maximale Timeouts pro Minute:\n"
+                               f"Maximale Kicks pro Minute: **{await self.config.guild(interaction.guild).maxKicksPerMinute()}**\n"
+                               f"Maximale Bans pro Minute: **{await self.config.guild(interaction.guild).maxBansPerMinute()}**\n"
                                f"### General:\n"
                                f"Nutze den generellen Log-Channel: **{await self.config.guild(interaction.guild).useGeneralLogChannel()}**\n"
                                f"### Misc:\n")
@@ -642,10 +703,10 @@ class Modsystem(commands.Cog):
                                          f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**")
                     if timeout != 0:
                         timeout_until = datetime.now().astimezone() + timedelta(minutes=timeout)
-                        global deleteMessageEvent
-                        deleteMessageEvent = False
+                        global enableEvent
+                        enableEvent = False
                         await user.timeout(timeout_until, reason=reason)
-                        deleteMessageEvent = True
+                        enableEvent = True
                 case "kick":
                     embedResponse.description=(f"{user.mention} wurde Verwarnt und mit der Begründung **{reason}** gekickt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
@@ -663,9 +724,9 @@ class Modsystem(commands.Cog):
                                          f"Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
                                          f"Dies ist dein **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'kickCount')}.** Kick\n"
                                          f"Verbleibende Punkte bis zum Ban: **{await self.config.guild(interaction.guild).warnBanWeight() - await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n")
-                    deleteMessageEvent = False
+                    enableEvent = False
                     await user.kick(reason=reason)
-                    deleteMessageEvent = True
+                    enableEvent = True
                 case "ban":
                     embedResponse.description=(f"{user.mention} wurde Verwarnt und mit der Begründung **{reason}** gebannt\n\n"
                                                f"Aktuelle Punkte: **{await self.config.guild(interaction.guild).users.get_raw(user.id, 'currentPoints')}**\n"
@@ -680,9 +741,9 @@ class Modsystem(commands.Cog):
                                              f"### Begrpndung\n"
                                              f"**{reason}**")
                     embedDM.description=(f"Du wurdest gerade von {interaction.guild.name} wegen zu vielen Verwarnungen mit der Begründung **{reason}** gebannt\n\n")
-                    deleteMessageEvent = False
+                    enableEvent = False
                     await user.ban(reason=reason, delete_message_days=1)
-                    deleteMessageEvent = True
+                    enableEvent = True
   
             if(sendPChannel):
                 await interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnPublicChannel())).send(embed=embedPublic)
@@ -838,7 +899,7 @@ class Modsystem(commands.Cog):
                 raise Exception("Kein gültiger Channel gesetzt")
             elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned')):
                 raise Exception("Dieser User ist bereits im Softban")
-            await Modsystem.do_softban(user, interaction.guild.channels, await self.config.guild(interaction.guild).softBanChannel())
+            await Functions.do_softban(user, interaction.guild.channels, await self.config.guild(interaction.guild).softBanChannel())
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=True)
             await user.send(f"Du hast einen Softban auf **{interaction.guild.name}** bekommen")
             embedLog.description=f"{user.mention} hat von {interaction.user.mention} einen **Softban** bekommen"
@@ -852,21 +913,6 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.followup.send(embed=embedFailure, ephemeral=True)
 
-    async def do_softban(user: discord.user, channels: discord.Guild.channels, jailchannel: int):
-        overwriteHide = discord.PermissionOverwrite()
-        overwriteShow = discord.PermissionOverwrite()
-        overwriteHide.view_channel=False
-        overwriteShow.view_channel=True
-        for channel in channels:
-                if(channel.id == jailchannel):
-                    await channel.set_permissions(user, overwrite=overwriteShow)
-                else:
-                    await channel.set_permissions(user, overwrite=overwriteHide)
-
-    async def undo_softban(user: discord.user, channels: discord.Guild.channels):
-        for channel in channels:
-                await channel.set_permissions(user, overwrite=None)
-
     @app_commands.command(name="revokesoftban", description="Nimmt den Softban wieder zurück")
     @app_commands.describe(user="Der User bei dem der Softban wieder zurück genommen werden soll")
     async def revokesoftban(self, interaction: discord.Interaction, user: discord.User):
@@ -878,7 +924,7 @@ class Modsystem(commands.Cog):
                 raise Exception("Du kannst keinen User mit einem höheren oder gleichen Rang Softbannen")
             elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned') == False):
                 raise Exception("Dieser User hat aktuell keinen Softban")
-            await Modsystem.undo_softban(user, interaction.guild.channels)
+            await Functions.undo_softban(user, interaction.guild.channels)
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=False)
             await user.send(f"Dein Softban auf **{interaction.guild.name}** wurde zurückgenommen")
             embedLog.description=f"Der **Softban** von {user.mention} wurde von {interaction.user.mention} aufgehoben"
@@ -892,26 +938,39 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.followup.send(embed=embedFailure, ephemeral=True)
             
-    @app_commands.command()
-    @app_commands.describe()
-    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.command(name="kick", description="Kicke einen User")
+    @app_commands.describe(user="Der User welcher gekickt werden soll", reason="Die Begründung für den Kick")
     async def kick(self, interaction: discord.Interaction, user: discord.Member, reason: str):
         try:
-            if(interaction.user.top_role.position < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
-                user.kick(reason=reason)
-                embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
-                await interaction.response.send_message(embed=embedLog, ephemeral=True)
+            if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
+                raise Exception("Keine Berechtigung diesen Befehl auszuführen")
+            if(user.bot):
+                raise Exception("Du kannst keinen Bot kicken")
+            if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
+                await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': 0})
+            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1})
+            if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage')):
+                raise Exception("Spam erkannt -> Abbruch")
+            user.kick(reason=reason)
+            embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
+            await interaction.response.send_message(embed=embedLog, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
             
-    @app_commands.command()
-    @app_commands.describe()
-    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.command(name="ban", description="Banne einen User")
+    @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban")
     async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str):
         try:
-            if(interaction.user.top_role.position <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
+            if(interaction.user.top_role <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung")
+            if(user.bot):
+                raise Exception("Du kannst keinen Bot bannen")
+            if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
+                await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': 0})
+            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage') + 1})
+            if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage')):
+                raise Exception("Spam erkannt -> Abbruch")
             user.ban(reason=reason, delete_message_days=1)
             embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
@@ -925,12 +984,11 @@ class Modsystem(commands.Cog):
         try:
             await interaction.response.defer(ephemeral=True)
             for user in interaction.guild.members:
-                if(dict(await self.config.guild(interaction.guild).users()).get(str(user.id)) is None):
-                    await Modsystem.init_user(self, user)
+                await Functions.init_user(self, user, interaction.guild)
             embedLog.description=f"Es wurden alle Fehlenden User erfolgreich angelegt"
             await interaction.followup.send(embed=embedLog)
         except Exception as error:
-            embedFailure.description(f"**Es ist folgender Fehler aufgetreten:**\n\n{error}")
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.followup.send(embed=embedFailure, ephemeral=True)
 
     @app_commands.command(name="getprofilepic", description="Lass dir das aktuelle Profilbild des Users ausgeben")
@@ -949,16 +1007,39 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"Es ist folgender Fehler aufgetreten:**\n\n{error}**"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
+    @app_commands.command(description="Geb dir oder einem anderen einen Timeout")
+    @app_commands.describe(minutes="Die Minuten wie lange der Timeout sein soll", user="Der User welchen den Timeout bekommen soll (Staff only)", reason="Die Begründung für den  Timeout (Staff only)")
+    async def timeout(self, interaction: discord.Interaction, minutes: app_commands.Range[int, 1, 40320], user: discord.Member = None, reason: str = ""):
+        try:
+            if(await self.config.guild(interaction.guild).enableTimeoutCommand() is not True):
+                raise Exception("Funktion nicht aktiviert")
+            timeout_until = datetime.now().astimezone() + timedelta(minutes=minutes)
+            if(user is not None):
+                if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
+                    raise Exception("Keine Berechtigung anderen einen Timeout zu geben")
+                await user.timeout(timeout_until, reason=reason)
+                embedLog.description=f"{interaction.user.mention} hat {user.mention} einen Timeout von {minutes} Minuten mit der Begründung {reason} gegeben"
+            else:
+                await interaction.user.timeout(timeout_until, reason="Auf eigenen Wunsch")
+                embedLog.description=f"{interaction.user.mention} hat sich selbst einen Timeout von {minutes} Minuten gegeben"
+            await interaction.response.send_message(embed=embedLog, ephemeral=True)
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
     @app_commands.command(name="help", description="Lass dir alle verfügbaren Befehle anzeigen")
     async def help(self, interaction: discord.Interaction):
         try:
+            await Functions.clear_user(self, interaction.user)
             embed = discord.Embed(color=0xfc7f03)
             embed.description=(f"# Hilfemenü\n"
                                    f"### Generelle Befehle:\n"
                                    f"* **/modlog showwarnlist**\n"
                                    f" * Zeigt eine Liste mit allen Usern die eine Verwarnung haben\n"
                                    f"* **/modlog showuserstats**\n"
-                                   f" * Zeigt deine aktuellen Warndaten an\n")
+                                   f" * Zeigt deine aktuellen Warndaten an\n"
+                                   f"* **/timeout <Minuten>**\n"
+                                   f" * Geb dir selbst einen Timeou\n")
             if(interaction.user.top_role.position > interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
                 embed.description=(f"# Hilfemenü\n"
                                    f"### Generelle Befehle\n"
@@ -973,7 +1054,9 @@ class Modsystem(commands.Cog):
                                    f"* **/revokesoftban <user>**\n"
                                    f" * Nimm den Softban von dem User wieder zurück\n"
                                    f"* **/getprofilepic [user]**\n"
-                                   f" * Lasse dir das Profilbild eines Nutzers ausgeben\n")
+                                   f" * Lasse dir das Profilbild eines Nutzers ausgeben\n"
+                                   f"* **/timeout <Minuten> [User] [Begründung]**\n"
+                                   f" * Geb dir selbst oder einem anderen User einen Timeout\n")
                 if(app_commands.checks.has_permissions(administrator=True)):
                     embed.description += (f"### Setup\n"
                                     f"* **/modlog setupchannel <Modul> <ChannelID>**\n"
@@ -992,7 +1075,9 @@ class Modsystem(commands.Cog):
                                     f"* **/modlog inituser**\n"
                                     f" * Initialisiere alle fehlenden User\n"
                                     f"* **/modloge setmodrole <role>**\n"
-                                    f" * Setze die Modrolle")
+                                    f" * Setze die Modrolle\n"
+                                    f"* **/modlog setupprotection <Setting> <int>**\n"
+                                    f" * Setze die Anti-Nuke Settings")
             embed.set_footer(text=f"Das Serverteam von {interaction.guild.name}", icon_url=interaction.guild.icon.url)
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
@@ -1002,7 +1087,7 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry):
         try:
-            if(deleteMessageEvent):
+            if(enableEvent):
                 if(entry.action == discord.AuditLogAction.kick and await self.config.guild(entry.guild).enableKickLog()):
                     if(await self.config.guild(entry.guild).useGeneralLogChannel()):
                         channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
@@ -1044,36 +1129,36 @@ class Modsystem(commands.Cog):
         except Exception as error:
             print("Fehler im Auditlog: " + str(error))
     
-    async def get_invite_with_code(invite_list, code):
-        for inv in invite_list:
-            if inv.code == code:
-                return inv
+    # async def get_invite_with_code(invite_list, code):
+    #     for inv in invite_list:
+    #         if inv.code == code:
+    #             return inv
             
-    async def init_user(self, member):
-        await self.config.guild(member.guild).users.set_raw(member.id, value={'displayName': member.display_name,
-                                                                                  'username': member.name,
-                                                                                  'currentReason': "-",
-                                                                                  'currentPoints': 0,
-                                                                                  'totalPoints': 0,
-                                                                                  'firstWarn': "-",
-                                                                                  'lastWarn': "-",
-                                                                                  'warnCount': 0,
-                                                                                  'kickCount': 0,
-                                                                                  'softBanned': False,
-                                                                                  'banned': False})
+    # async def init_user(self, member):
+    #     await self.config.guild(member.guild).users.set_raw(member.id, value={'displayName': member.display_name,
+    #                                                                               'username': member.name,
+    #                                                                               'currentReason': "-",
+    #                                                                               'currentPoints': 0,
+    #                                                                               'totalPoints': 0,
+    #                                                                               'firstWarn': "-",
+    #                                                                               'lastWarn': "-",
+    #                                                                               'warnCount': 0,
+    #                                                                               'kickCount': 0,
+    #                                                                               'softBanned': False,
+    #                                                                               'banned': False})
         
-    async def clear_user(self, member):
-        data = await self.config.guild(member.guild).users.get_raw(member.id)
-        timeDiff = datetime.now() - member.joined_at.replace(tzinfo=None)
-        oneDay = timedelta(days=1)
-        if(data.get('warnCount') == 0 and data.get('kickCount') == 0 and data.get('softBanned') == False and data.get('banned') == False and timeDiff <= oneDay ):
-            await self.config.guild(member.guild).users.clear_raw(member.id)
+    # async def clear_user(self, member):
+    #     data = await self.config.guild(member.guild).users.get_raw(member.id)
+    #     timeDiff = datetime.now() - member.joined_at.replace(tzinfo=None)
+    #     oneDay = timedelta(days=1)
+    #     if(data.get('warnCount') == 0 and data.get('kickCount') == 0 and data.get('softBanned') == False and data.get('banned') == False and timeDiff <= oneDay ):
+    #         await self.config.guild(member.guild).users.clear_raw(member.id)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
         try:
-            if(await self.config.guild(member.guild).users.get_raw(member.id) is None):
-                await Modsystem.init_user(self, member)
+            if(dict(await self.config.guild(member.guild).users()).get((str(member.id))) is None):
+                await Modsystem.init_user(self, member, member.guild)
             if(await self.config.guild(member.guild).users.get_raw(member.id, 'softBanned')):
                 await Modsystem.do_softban(member, member.guild.channels, await self.config.guild(member.guild).softBanChannel())
             if(await self.config.guild(member.guild).enableJoinLog()):
@@ -1120,7 +1205,7 @@ class Modsystem(commands.Cog):
             inviteCode = await self.config.guild(data.user.guild).invites.get_raw(data.user.id, 'invitecode')
             await self.config.guild(data.user.guild).invites.clear_raw(data.user.id)
             await self.config.guild(data.user.guild).invites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).invites.get_raw(inviteCode, 'count') - 1, 'uses': await self.config.guild(data.user.guild).invites.get_raw(inviteCode, 'uses')})
-            await Modsystem.clear_user(self, data.user)
+            await Functions.clear_user(self, data.user)
         except Exception as error:
             print("Fehler bei Member-Remove: " + str(error))
 
@@ -1258,11 +1343,22 @@ class Modsystem(commands.Cog):
                             await self.config.guild(guild).users.set_raw(userWarn, 'currentPoints', value=0)
                             print("Warnpunkte wurden zurückgesetzt")
         except Exception as error:
-            print("Fehler bei Scheduled-Task: " + str(error))
+            print("Fehler bei Scheduled-Warn-Task: " + str(error))
+
+    @tasks.loop(minutes=1)
+    async def lower_spam_protection_counts(self):
+        try:
+            for guild in self.bot.guilds:
+                for userId in await self.config.guild(guild).spamProtection():
+                    if(await self.config.guild(userId).spamProtection.get_raw(userId, 'kickUsage') > 1):
+                        await self.config.guild(guild).spamProtection.set_raw(userId, 'kickUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'kickUsage') - 1)
+        except Exception as error:
+            print("Fehler bei Scheduled-Spam-Task: " + str(error))
 
     async def cog_load(self):
         try:
             for guild in self.bot.guilds:
+                Modsystem.lower_spam_protection_counts.start(self)
                 if(await self.config.guild(guild).enableWarn()):
                     Modsystem.remove_warn_points.start(self)
                     print("Warnsystem aktiviert")
@@ -1277,8 +1373,11 @@ class Modsystem(commands.Cog):
 
     async def cog_unload(self):
         try:
-            Modsystem.remove_warn_points.cancel()
-            print("Warnsystem deaktiviert")
+            for guild in self.bot.guilds:
+                Modsystem.lower_spam_protection_counts.cancel()
+                if(await self.config.guild(guild).enableWarn()):
+                    Modsystem.remove_warn_points.cancel()
+                    print("Warnsystem deaktiviert")
         except Exception as error:
             print("Fehler in cog_unload: " + str(error))
 
@@ -1286,6 +1385,9 @@ class Modsystem(commands.Cog):
     async def on_ready(self):
         try:
             for guild in self.bot.guilds:
+                for user in guild.members:
+                    await Functions.init_user(self, user, guild)
+                Modsystem.lower_spam_protection_counts.start(self)
                 if(await self.config.guild(guild).enableWarn()):
                     Modsystem.remove_warn_points.start(self)
                     print("Warnsystem aktiviert")
