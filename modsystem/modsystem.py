@@ -938,31 +938,39 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.followup.send(embed=embedFailure, ephemeral=True)
             
-    @app_commands.command()
-    @app_commands.describe()
-    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.command(name="kick", description="Kicke einen User")
+    @app_commands.describe(user="Der User welcher gekickt werden soll", reason="Die Begründung für den Kick")
     async def kick(self, interaction: discord.Interaction, user: discord.Member, reason: str):
         try:
             if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
-                if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
-                    await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': 0})
-                await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1})
-                if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage')):
-                    raise Exception("Spam erkannt -> Abbruch")
-                user.kick(reason=reason)
-                embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
-                await interaction.response.send_message(embed=embedLog, ephemeral=True)
+                raise Exception("Keine Berechtigung diesen Befehl auszuführen")
+            if(user.bot):
+                raise Exception("Du kannst keinen Bot kicken")
+            if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
+                await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': 0})
+            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1})
+            if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage')):
+                raise Exception("Spam erkannt -> Abbruch")
+            user.kick(reason=reason)
+            embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
+            await interaction.response.send_message(embed=embedLog, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
             
-    @app_commands.command()
-    @app_commands.describe()
-    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.command(name="ban", description="Banne einen User")
+    @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban")
     async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str):
         try:
-            if(interaction.user.top_role.position <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
+            if(interaction.user.top_role <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung")
+            if(user.bot):
+                raise Exception("Du kannst keinen Bot bannen")
+            if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
+                await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': 0})
+            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage') + 1})
+            if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage')):
+                raise Exception("Spam erkannt -> Abbruch")
             user.ban(reason=reason, delete_message_days=1)
             embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
