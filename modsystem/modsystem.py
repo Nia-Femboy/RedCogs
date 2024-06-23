@@ -891,9 +891,9 @@ class Modsystem(commands.Cog):
     async def softban(self, interaction: discord.Interaction, user: discord.Member):
         try:
             await interaction.response.defer(ephemeral=True)
-            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
+            if(interaction.user.top_role < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole())):
                 raise Exception("Du hast keine Berechtigung für diesen Befehl")
-            elif(interaction.user.top_role.position <= user.top_role.position):
+            elif(interaction.user.top_role <= user.top_role):
                 raise Exception("Du kannst keinen User mit einem höheren oder gleichen Rang Softbannen")
             elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).softBanChannel())) is None):
                 raise Exception("Kein gültiger Channel gesetzt")
@@ -915,12 +915,12 @@ class Modsystem(commands.Cog):
 
     @app_commands.command(name="revokesoftban", description="Nimmt den Softban wieder zurück")
     @app_commands.describe(user="Der User bei dem der Softban wieder zurück genommen werden soll")
-    async def revokesoftban(self, interaction: discord.Interaction, user: discord.User):
+    async def revokesoftban(self, interaction: discord.Interaction, user: discord.member):
         try:
             await interaction.response.defer(ephemeral=True)
-            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
+            if(interaction.user.top_role < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole())):
                 raise Exception("Du hast keine Berechtigung für diesen Befehl")
-            elif(interaction.user.top_role.position <= user.top_role.position):
+            elif(interaction.user.top_role <= user.top_role):
                 raise Exception("Du kannst keinen User mit einem höheren oder gleichen Rang Softbannen")
             elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned') == False):
                 raise Exception("Dieser User hat aktuell keinen Softban")
@@ -944,6 +944,8 @@ class Modsystem(commands.Cog):
         try:
             if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung diesen Befehl auszuführen")
+            if(user.top_role > interaction.user.top_role):
+                raise Exception("Du kannst keinen User kicken der einen höheren oder gleichwertigen Rang hat als du")
             if(user.bot):
                 raise Exception("Du kannst keinen Bot kicken")
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
@@ -959,11 +961,13 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
             
     @app_commands.command(name="ban", description="Banne einen User")
-    @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban")
-    async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str):
+    @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban", messagedelete="Die Anzahl der Tage welche Rückwirkend die Nachrichten des Users gelöscht werden sollen")
+    async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str, messagedelete: int = 1):
         try:
             if(interaction.user.top_role <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung")
+            if(user.top_role > interaction.user.top_role):
+                raise Exception("Du kannst keinen User bannen der einen höheren oder gleichwertigen Rang hat als du")
             if(user.bot):
                 raise Exception("Du kannst keinen Bot bannen")
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
@@ -971,7 +975,7 @@ class Modsystem(commands.Cog):
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage') + 1})
             if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
-            user.ban(reason=reason, delete_message_days=1)
+            user.ban(reason=reason, delete_message_days=messagedelete)
             embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
         except Exception as error:
@@ -1349,9 +1353,10 @@ class Modsystem(commands.Cog):
     async def lower_spam_protection_counts(self):
         try:
             for guild in self.bot.guilds:
-                for userId in await self.config.guild(guild).spamProtection():
-                    if(await self.config.guild(userId).spamProtection.get_raw(userId, 'kickUsage') > 1):
-                        await self.config.guild(guild).spamProtection.set_raw(userId, 'kickUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'kickUsage') - 1)
+                if(await self.config.guild(guild).spamProtection() is not None):
+                    for userId in await self.config.guild(guild).spamProtection():
+                        if(await self.config.guild(userId).spamProtection.get_raw(userId, 'kickUsage') > 1):
+                            await self.config.guild(guild).spamProtection.set_raw(userId, 'kickUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'kickUsage') - 1)
         except Exception as error:
             print("Fehler bei Scheduled-Spam-Task: " + str(error))
 
