@@ -1,10 +1,10 @@
 from typing import Optional
 import discord
 
-from .common.buttons import TicketButton
+#from .common.buttons import TicketButton
+from .common.functions import Functions
 
 from redbot.core import commands, app_commands, Config
-from zammad_py import ZammadAPI
 
 embedSuccess = discord.Embed(description="# Erfolgreich\n**Es wurden folgende Werte gesetzt:**", color=0x0ffc03)
 embedFailure = discord.Embed(color=0xff0000)
@@ -203,32 +203,21 @@ class Tickets(commands.Cog):
     async def create(self, interaction: discord.Interaction):
         try:
 
-            embed = discord.Embed(title=await self.config.guild(interaction.guild).embedTitle(), description=await self.config.guild(interaction.guild).embedDescription())
+            await Functions.create_text_channel(self, interaction, 5)
 
-            await interaction.response.send_message(embed=embed, view=TicketButton(await self.config.guild(interaction.guild).buttonLabel(),
-                                                                      discord.ButtonStyle.green, await self.config.guild(interaction.guild).modalTitle(),
-                                                                      await self.config.guild(interaction.guild).modalNameLabel(),
-                                                                      await self.config.guild(interaction.guild).modalNamePlaceholder(),
-                                                                      await self.config.guild(interaction.guild).modalMailLabel(),
-                                                                      await self.config.guild(interaction.guild).modalMailPlaceholder(),
-                                                                      await self.config.guild(interaction.guild).modalSubjectLabel(),
-                                                                      await self.config.guild(interaction.guild).modalSubjectPlaceholder(),
-                                                                      await self.config.guild(interaction.guild).modalMessageLabel(),
-                                                                      await self.config.guild(interaction.guild).modalMessagePlaceholder(),
-                                                                      discord.TextStyle.long))
+            # embed = discord.Embed(title=await self.config.guild(interaction.guild).embedTitle(), description=await self.config.guild(interaction.guild).embedDescription())
+
+            # await interaction.response.send_message(embed=embed, view=TicketButton(await self.config.guild(interaction.guild).buttonLabel(),
+            #                                                           discord.ButtonStyle.green, await self.config.guild(interaction.guild).modalTitle(),
+            #                                                           await self.config.guild(interaction.guild).modalNameLabel(),
+            #                                                           await self.config.guild(interaction.guild).modalNamePlaceholder(),
+            #                                                           await self.config.guild(interaction.guild).modalMailLabel(),
+            #                                                           await self.config.guild(interaction.guild).modalMailPlaceholder(),
+            #                                                           await self.config.guild(interaction.guild).modalSubjectLabel(),
+            #                                                           await self.config.guild(interaction.guild).modalSubjectPlaceholder(),
+            #                                                           await self.config.guild(interaction.guild).modalMessageLabel(),
+            #                                                           await self.config.guild(interaction.guild).modalMessagePlaceholder(),
+            #                                                           discord.TextStyle.long))
 
         except Exception as error:
             print(error)
-
-    async def create_text_channel(self, interaction: discord.Interaction, ticketID: int):
-        try:
-            channelname=f"ticket-{interaction.user}"
-            permissionOverwrite = {
-                interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
-                interaction.user: discord.PermissionOverwrite(view_channel=True)
-            }
-            channel = await interaction.guild.create_text_channel(name=channelname, category=int(await self.config.guild(interaction.guild).ticketCategory()), overwrites=permissionOverwrite)
-            await self.config.guild(interaction.guild).tickets.set_raw(interaction.user.id, value={'channel': channel.id, 'zammadID': ticketID})
-        except Exception as error:
-            embedFailure.description = f"# Fehler\n### Es ist folgender Fehler aufgetreten:\n\n{error}"
-            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
