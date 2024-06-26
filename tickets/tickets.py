@@ -221,3 +221,17 @@ class Tickets(commands.Cog):
 
         except Exception as error:
             print(error)
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        try:
+            if(message.author.bot == False):
+                for userID in await self.config.guild(message.guild).tickets():
+                    if(await self.config.guild(message.guild).tickets.get_raw(userID, 'channel') == message.channel.id):
+                        if(message.content == "close" and userID == str(message.author.id)):
+                            await message.channel.delete()
+                            await self.config.guild(message.guild).tickets.clear_raw(userID)
+                        else:
+                            await message.channel.send("Nur der User darf das Ticket schließen")
+        except Exception as error:
+            print(f"Fehler bei on_message: {error}")

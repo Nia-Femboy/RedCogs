@@ -38,8 +38,13 @@ class Functions():
                 interaction.user: discord.PermissionOverwrite(view_channel=True)
             }
             channel = await interaction.guild.create_text_channel(name=channelname, category=discord.utils.get(interaction.guild.categories, id=int(await self.config.guild(interaction.guild).ticketCategory())), overwrites=permissionOverwrite)
+            await interaction.channel.typing()
             await channel.send("Heyho")
-            #await self.config.guild(interaction.guild).tickets.set_raw(interaction.user.id, value={'channel': channel.id, 'zammadID': ticketID})
+            await self.config.guild(interaction.guild).tickets.set_raw(interaction.user.id, value={'channel': channel.id, 'zammadID': ticketID})
+            # msg = await interaction.client.wait_for('message', timeout=None)
+            # print(msg.content)
+            # if(msg.content == "close"):
+            #     await channel.delete()
         except Exception as error:
             embedFailure.description = f"# Fehler\n### Es ist folgenderA Fehler aufgetreten:\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
