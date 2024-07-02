@@ -1,8 +1,9 @@
 from typing import Optional
 import discord
 
-#from .common.buttons import TicketButton
+from .common.buttons import TicketButton
 from .common.functions import Functions
+from .common.modals import TicketCreateModal
 
 from redbot.core import commands, app_commands, Config
 
@@ -203,10 +204,26 @@ class Tickets(commands.Cog):
     async def create(self, interaction: discord.Interaction):
         try:
 
-            await Functions.create_text_channel(self, interaction, 5)
+            #await Functions.create_text_channel(self, interaction, 5)
 
-            # embed = discord.Embed(title=await self.config.guild(interaction.guild).embedTitle(), description=await self.config.guild(interaction.guild).embedDescription())
-
+            embed = discord.Embed(description=(f"# {await self.config.guild(interaction.guild).embedTitle()}\n"
+                                               f"{await self.config.guild(interaction.guild).embedDescription()}"))
+            
+            button = TicketButton(await self.config.guild(interaction.guild).buttonLabel(),
+                                  discord.ButtonStyle.green,
+                                  await self.config.guild(interaction.guild).modalTitle(),
+                                  await self.config.guild(interaction.guild).modalNameLabel(),
+                                  await self.config.guild(interaction.guild).modalNamePlaceholder(),
+                                  await self.config.guild(interaction.guild).modalMailLabel(),
+                                  await self.config.guild(interaction.guild).modalMailPlaceholder(),
+                                  await self.config.guild(interaction.guild).modalSubjectLabel(),
+                                  await self.config.guild(interaction.guild).modalSubjectPlaceholder(),
+                                  await self.config.guild(interaction.guild).modalMessageLabel(),
+                                  await self.config.guild(interaction.guild).modalMessagePlaceholder(),
+                                  discord.TextStyle.long,
+                                  interaction,
+                                  TicketCreateModal)
+            
             # await interaction.response.send_message(embed=embed, view=TicketButton(await self.config.guild(interaction.guild).buttonLabel(),
             #                                                           discord.ButtonStyle.green, await self.config.guild(interaction.guild).modalTitle(),
             #                                                           await self.config.guild(interaction.guild).modalNameLabel(),
@@ -218,6 +235,7 @@ class Tickets(commands.Cog):
             #                                                           await self.config.guild(interaction.guild).modalMessageLabel(),
             #                                                           await self.config.guild(interaction.guild).modalMessagePlaceholder(),
             #                                                           discord.TextStyle.long))
+            await interaction.response.send_message(embed=embed, view=button)
 
         except Exception as error:
             print(error)

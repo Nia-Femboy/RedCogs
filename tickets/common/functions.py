@@ -26,6 +26,7 @@ class Functions():
             }
 
             ticket = client.ticket.create(params=params)
+            print(ticket)
         except Exception as error:
             embedFailure.description = f"# Fehler\n### Es ist folgender Fehler aufgetreten:\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
@@ -48,3 +49,17 @@ class Functions():
         except Exception as error:
             embedFailure.description = f"# Fehler\n### Es ist folgenderA Fehler aufgetreten:\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
+    async def create_ticket_modal(interaction: discord.Interaction, func):
+            modal = func(title="self.title")
+            modal.name.label = "self.nameLabel"
+            modal.name.placeholder = "self.namePlaceholder"
+            modal.mail.label = "self.mailLabel"
+            modal.mail.placeholder = "self.mailPlaceholder"
+            modal.subject.label = "self.subjectLabel"
+            modal.subject.placeholder = "self.subjectPlaceholder"
+            modal.message.label = "self.messageLabel"
+            modal.message.placeholder = "self.messagePlaceholder"
+            modal.message.style = "self.messageStyle"
+            modal.user = interaction.user
+            await interaction.response.send_modal(modal)

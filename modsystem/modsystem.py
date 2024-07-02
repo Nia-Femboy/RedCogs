@@ -915,7 +915,7 @@ class Modsystem(commands.Cog):
 
     @app_commands.command(name="revokesoftban", description="Nimmt den Softban wieder zurück")
     @app_commands.describe(user="Der User bei dem der Softban wieder zurück genommen werden soll")
-    async def revokesoftban(self, interaction: discord.Interaction, user: discord.member):
+    async def revokesoftban(self, interaction: discord.Interaction, user: discord.Member):
         try:
             await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole())):
@@ -953,7 +953,7 @@ class Modsystem(commands.Cog):
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1})
             if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
-            user.kick(reason=reason)
+            await user.kick(reason=reason)
             embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
         except Exception as error:
@@ -975,7 +975,7 @@ class Modsystem(commands.Cog):
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage') + 1})
             if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
-            user.ban(reason=reason, delete_message_days=messagedelete)
+            await user.ban(reason=reason, delete_message_days=messagedelete)
             embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
         except Exception as error:
