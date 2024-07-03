@@ -7,9 +7,11 @@ from .common.modals import TicketCreateModal
 
 from redbot.core import commands, app_commands, Config
 
-embedSuccess = discord.Embed(description="# Erfolgreich\n**Es wurden folgende Werte gesetzt:**", color=0x0ffc03)
+embedSuccessDescription = "# Erfolgreich\n**Es wurden folgende Werte gesetzt:**"
+embedSuccess = discord.Embed(description=embedSuccessDescription, color=0x0ffc03)
 embedFailure = discord.Embed(color=0xff0000)
 embedLog = discord.Embed(color=0xfc7f03)
+modal = TicketCreateModal()
 
 class Tickets(commands.Cog):
 
@@ -105,51 +107,60 @@ class Tickets(commands.Cog):
                 case "modalTitle":
 
                     await self.config.guild(interaction.guild).modalTitle.set(wert)
+                    await Functions.update_modal(modal, modal_title=wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Modal Title__**\n* {wert}"
 
                 case "modalNameLabel":
 
                     await self.config.guild(interaction.guild).modalNameLabel.set(wert)
+                    await Functions.update_modal(modal, name_label=wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**Modal Name Label**\n* {wert}"
 
                 case "modalNamePlaceholder":
 
                     await self.config.guild(interaction.guild).modalNamePlaceholder.set(wert)
+                    await Functions.update_modal(modal, name_placeholder=wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Modal Name Placeholder__**\n* {wert}"
 
                 case "modalMailLabel":
 
                     await self.config.guild(interaction.guild).modalMailLabel.set(wert)
+                    await Functions.update_modal(modal, mail_label=wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Modal Mail Label__**\n* {wert}"
 
                 case "modalMailPlaceholder":
 
                     await self.config.guild(interaction.guild).modalMailPlaceholder.set(wert)
+                    await Functions.update_modal(modal, mail_placeholder=wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Modal Mail Placeholder__**\n* {wert}"
 
                 case "modalSubjectLabel":
 
                     await self.config.guild(interaction.guild).modalSubjectLabel.set(wert)
+                    await Functions.update_modal(modal, subject_label=wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Modal Subject Label__**\n* {wert}"
 
                 case "modalSubjectPlaceholder":
 
                     await self.config.guild(interaction.guild).modalSubjectPlaceholder.set(wert)
+                    await Functions.update_modal(modal, subject_placeholder=wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Modal Subject Placeholder__**\n* {wert}"
 
                 case "modalMessageLabel":
 
                     await self.config.guild(interaction.guild).modalMessageLabel.set(wert)
+                    await Functions.update_modal(modal, message_label=wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Modal Message Label__**\n* {wert}"
 
                 case "modalMessagePlaceholder":
 
                     await self.config.guild(interaction.guild).modalMessagePlaceholder.set(wert)
+                    await Functions.update_modal(modal, message_placeholder=wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Modal Message Placeholder__**\n* {wert}"
 
                 case "buttonLabel":
 
-                    await self.config.guild(interaction.guild).embedFooterURL.set(wert)
+                    await self.config.guild(interaction.guild).buttonLabel.set(wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Button Label__**\n* {wert}"
 
                 case "ticketCategory":
@@ -162,6 +173,7 @@ class Tickets(commands.Cog):
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Ticket Kategorie__**\n* {wert}"
                     
             await interaction.response.send_message(embed=embedSuccess, ephemeral=True)
+            embedSuccess.description = embedSuccessDescription
 
         except Exception as error:
             embedFailure.description = f"# Fehler\n### Es ist folgender Fehler aufgetreten:\n\n{error}"
@@ -223,18 +235,22 @@ class Tickets(commands.Cog):
             #                       discord.TextStyle.long,
             #                       interaction,
             #                       TicketCreateModal)
+
+            modal.title = await self.config.guild(interaction.guild).modalTitle()
+            modal.name.label = await self.config.guild(interaction.guild).modalNameLabel()
+            modal.name.placeholder = await self.config.guild(interaction.guild).modalNamePlaceholder()
+            modal.mail.label = await self.config.guild(interaction.guild).modalMailLabel()
+            modal.mail.placeholder = await self.config.guild(interaction.guild).modalMailPlaceholder()
+            modal.subject.label = await self.config.guild(interaction.guild).modalSubjectLabel()
+            modal.subject.placeholder = await self.config.guild(interaction.guild).modalSubjectPlaceholder()
+            modal.message.label = await self.config.guild(interaction.guild).modalMessageLabel()
+            modal.message.placeholder = await self.config.guild(interaction.guild).modalMessagePlaceholder()
+            modal.message.style = discord.TextStyle.long
+            modal.mainClass = self.config
             
             await interaction.response.send_message(embed=embed, view=TicketButton(await self.config.guild(interaction.guild).buttonLabel(),
-                                                                      discord.ButtonStyle.green, await self.config.guild(interaction.guild).modalTitle(),
-                                                                      await self.config.guild(interaction.guild).modalNameLabel(),
-                                                                      await self.config.guild(interaction.guild).modalNamePlaceholder(),
-                                                                      await self.config.guild(interaction.guild).modalMailLabel(),
-                                                                      await self.config.guild(interaction.guild).modalMailPlaceholder(),
-                                                                      await self.config.guild(interaction.guild).modalSubjectLabel(),
-                                                                      await self.config.guild(interaction.guild).modalSubjectPlaceholder(),
-                                                                      await self.config.guild(interaction.guild).modalMessageLabel(),
-                                                                      await self.config.guild(interaction.guild).modalMessagePlaceholder(),
-                                                                      discord.TextStyle.long))
+                                                                      discord.ButtonStyle.green,
+                                                                      modal))
             #await interaction.response.send_message(embed=embed, view=button)
 
         except Exception as error:
