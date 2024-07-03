@@ -10,6 +10,7 @@ class Functions():
 
     async def create_ticket(self, interaction: discord.Interaction, name: str, mail: str, subject: str, message: str):
         try:
+
             client = ZammadAPI(url=self.config.guild(interaction.guild).host(), username=self.config.guild(interaction.guild).user(), password=self.config.guild(interaction.guild).password())
 
             params = {
@@ -49,17 +50,3 @@ class Functions():
         except Exception as error:
             embedFailure.description = f"# Fehler\n### Es ist folgenderA Fehler aufgetreten:\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
-
-    async def create_ticket_modal(interaction: discord.Interaction, func):
-            modal = func(title="self.title")
-            modal.name.label = "self.nameLabel"
-            modal.name.placeholder = "self.namePlaceholder"
-            modal.mail.label = "self.mailLabel"
-            modal.mail.placeholder = "self.mailPlaceholder"
-            modal.subject.label = "self.subjectLabel"
-            modal.subject.placeholder = "self.subjectPlaceholder"
-            modal.message.label = "self.messageLabel"
-            modal.message.placeholder = "self.messagePlaceholder"
-            modal.message.style = "self.messageStyle"
-            modal.user = interaction.user
-            await interaction.response.send_modal(modal)

@@ -209,33 +209,33 @@ class Tickets(commands.Cog):
             embed = discord.Embed(description=(f"# {await self.config.guild(interaction.guild).embedTitle()}\n"
                                                f"{await self.config.guild(interaction.guild).embedDescription()}"))
             
-            button = TicketButton(await self.config.guild(interaction.guild).buttonLabel(),
-                                  discord.ButtonStyle.green,
-                                  await self.config.guild(interaction.guild).modalTitle(),
-                                  await self.config.guild(interaction.guild).modalNameLabel(),
-                                  await self.config.guild(interaction.guild).modalNamePlaceholder(),
-                                  await self.config.guild(interaction.guild).modalMailLabel(),
-                                  await self.config.guild(interaction.guild).modalMailPlaceholder(),
-                                  await self.config.guild(interaction.guild).modalSubjectLabel(),
-                                  await self.config.guild(interaction.guild).modalSubjectPlaceholder(),
-                                  await self.config.guild(interaction.guild).modalMessageLabel(),
-                                  await self.config.guild(interaction.guild).modalMessagePlaceholder(),
-                                  discord.TextStyle.long,
-                                  interaction,
-                                  TicketCreateModal)
+            # button = TicketButton(await self.config.guild(interaction.guild).buttonLabel(),
+            #                       discord.ButtonStyle.green,
+            #                       await self.config.guild(interaction.guild).modalTitle(),
+            #                       await self.config.guild(interaction.guild).modalNameLabel(),
+            #                       await self.config.guild(interaction.guild).modalNamePlaceholder(),
+            #                       await self.config.guild(interaction.guild).modalMailLabel(),
+            #                       await self.config.guild(interaction.guild).modalMailPlaceholder(),
+            #                       await self.config.guild(interaction.guild).modalSubjectLabel(),
+            #                       await self.config.guild(interaction.guild).modalSubjectPlaceholder(),
+            #                       await self.config.guild(interaction.guild).modalMessageLabel(),
+            #                       await self.config.guild(interaction.guild).modalMessagePlaceholder(),
+            #                       discord.TextStyle.long,
+            #                       interaction,
+            #                       TicketCreateModal)
             
-            # await interaction.response.send_message(embed=embed, view=TicketButton(await self.config.guild(interaction.guild).buttonLabel(),
-            #                                                           discord.ButtonStyle.green, await self.config.guild(interaction.guild).modalTitle(),
-            #                                                           await self.config.guild(interaction.guild).modalNameLabel(),
-            #                                                           await self.config.guild(interaction.guild).modalNamePlaceholder(),
-            #                                                           await self.config.guild(interaction.guild).modalMailLabel(),
-            #                                                           await self.config.guild(interaction.guild).modalMailPlaceholder(),
-            #                                                           await self.config.guild(interaction.guild).modalSubjectLabel(),
-            #                                                           await self.config.guild(interaction.guild).modalSubjectPlaceholder(),
-            #                                                           await self.config.guild(interaction.guild).modalMessageLabel(),
-            #                                                           await self.config.guild(interaction.guild).modalMessagePlaceholder(),
-            #                                                           discord.TextStyle.long))
-            await interaction.response.send_message(embed=embed, view=button)
+            await interaction.response.send_message(embed=embed, view=TicketButton(await self.config.guild(interaction.guild).buttonLabel(),
+                                                                      discord.ButtonStyle.green, await self.config.guild(interaction.guild).modalTitle(),
+                                                                      await self.config.guild(interaction.guild).modalNameLabel(),
+                                                                      await self.config.guild(interaction.guild).modalNamePlaceholder(),
+                                                                      await self.config.guild(interaction.guild).modalMailLabel(),
+                                                                      await self.config.guild(interaction.guild).modalMailPlaceholder(),
+                                                                      await self.config.guild(interaction.guild).modalSubjectLabel(),
+                                                                      await self.config.guild(interaction.guild).modalSubjectPlaceholder(),
+                                                                      await self.config.guild(interaction.guild).modalMessageLabel(),
+                                                                      await self.config.guild(interaction.guild).modalMessagePlaceholder(),
+                                                                      discord.TextStyle.long))
+            #await interaction.response.send_message(embed=embed, view=button)
 
         except Exception as error:
             print(error)
