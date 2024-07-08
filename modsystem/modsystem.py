@@ -1132,39 +1132,14 @@ class Modsystem(commands.Cog):
                         embedLog.clear_fields()
         except Exception as error:
             print("Fehler im Auditlog: " + str(error))
-    
-    # async def get_invite_with_code(invite_list, code):
-    #     for inv in invite_list:
-    #         if inv.code == code:
-    #             return inv
-            
-    # async def init_user(self, member):
-    #     await self.config.guild(member.guild).users.set_raw(member.id, value={'displayName': member.display_name,
-    #                                                                               'username': member.name,
-    #                                                                               'currentReason': "-",
-    #                                                                               'currentPoints': 0,
-    #                                                                               'totalPoints': 0,
-    #                                                                               'firstWarn': "-",
-    #                                                                               'lastWarn': "-",
-    #                                                                               'warnCount': 0,
-    #                                                                               'kickCount': 0,
-    #                                                                               'softBanned': False,
-    #                                                                               'banned': False})
-        
-    # async def clear_user(self, member):
-    #     data = await self.config.guild(member.guild).users.get_raw(member.id)
-    #     timeDiff = datetime.now() - member.joined_at.replace(tzinfo=None)
-    #     oneDay = timedelta(days=1)
-    #     if(data.get('warnCount') == 0 and data.get('kickCount') == 0 and data.get('softBanned') == False and data.get('banned') == False and timeDiff <= oneDay ):
-    #         await self.config.guild(member.guild).users.clear_raw(member.id)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
         try:
             if(dict(await self.config.guild(member.guild).users()).get((str(member.id))) is None):
-                await Modsystem.init_user(self, member, member.guild)
+                await Functions.init_user(self, member, member.guild)
             if(await self.config.guild(member.guild).users.get_raw(member.id, 'softBanned')):
-                await Modsystem.do_softban(member, member.guild.channels, await self.config.guild(member.guild).softBanChannel())
+                await Functions.do_softban(member, member.guild.channels, await self.config.guild(member.guild).softBanChannel())
             if(await self.config.guild(member.guild).enableJoinLog()):
                 if(await self.config.guild(member.guild).useGeneralLogChannel() == True):
                     channel = member.guild.get_channel(await self.config.guild(member.guild).generalLogChannel())
@@ -1173,7 +1148,7 @@ class Modsystem(commands.Cog):
                 invites_after = await member.guild.invites()
                 usedInvite: discord.invite
                 for invite in await self.config.guild(member.guild).invites():
-                    result = await Modsystem.get_invite_with_code(invites_after, invite)
+                    result = await Functions.get_invite_with_code(invites_after, invite)
                     if(result is None):
                         await self.config.guild(member.guild).invites.clear_raw(invite)
                     else:
