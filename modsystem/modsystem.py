@@ -1031,6 +1031,38 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
+    @app_commands.command(description="Setze den User auf die Watchlist")
+    @app_commands.describe(user="Der User welcher beobachtet werden soll")
+    async def watch(self, interaction: discord.Interaction, user: discord.Member):
+        try:
+            #
+            #
+            #
+            #   User soll in Array eingetragen werden und bei änderung von Username, Profilbild, Displayname usw. eine Benachrichtigung in den Modlog channel gesendet werden (Weiter unten muss noch ein Listener erstellt/bearbeitet werden und oben evtl benötigte Variabeln)
+            #
+            #
+            #
+            print()
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
+    @app_commands.command(description="Entferne einen User von der Watchlist")
+    @app_commands.describe(user="Der User welcher von der Watchlist entfernt werden soll")
+    async def watch(self, interaction: discord.Interaction, user: discord.Member):
+        try:
+            #
+            #
+            #
+            #   Entfernt den User aus dem Array
+            #
+            #
+            #
+            print()
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
     @app_commands.command(name="help", description="Lass dir alle verfügbaren Befehle anzeigen")
     async def help(self, interaction: discord.Interaction):
         try:
