@@ -14,45 +14,44 @@ class Functions():
     async def create_ticket(self, interaction: discord.Interaction, name: str, mail: str, subject: str, message: str):
         try:
 
-            client = ZammadAPI(url=await self.config.guild(interaction.guild).host(), username=await self.config.guild(interaction.guild).user(), password=await self.config.guild(interaction.guild).password())
+            # client = ZammadAPI(url=await self.config.guild(interaction.guild).host(), username=await self.config.guild(interaction.guild).user(), password=await self.config.guild(interaction.guild).password())
 
-            print(client.user.me())
+            # print(client.user.me())
 
-            params = {
-                "title": "Test",
-                "group": "Discord",
-                "customer": mail,
-                "article": {
-                    "from": name,
-                    "subject": subject,
-                    "body": message,
-                    "type": "note",
-                    "internal": False
-                }
-            }
+            # params = {
+            #     "title": "Test",
+            #     "group": "Discord",
+            #     "customer": mail,
+            #     "article": {
+            #         "from": name,
+            #         "subject": subject,
+            #         "body": message,
+            #         "type": "note",
+            #         "internal": False
+            #     }
+            # }
 
-            ticket = await client.ticket.create(params=params)
-            print(ticket)
+            # ticket = await client.ticket.create(params=params)
+            # print(ticket)
+
+            channel = await self.create_text_channel(interaction, 5)
+            embed = discord.Embed(description=f"# {subject}\n### {message}", color=0xfc7f03)
+            embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar)
+            await channel.send(embed=embed)
+
         except Exception as error:
-            #embedFailure.description = f"# Fehler\n### Es ist folgender Fehler aufgetreten:\n\n{error}"
-            #await interaction.response.send_message(embed=embedFailure, ephemeral=True)
             print(f"Fehler bei create_ticket: {error}")
 
     async def create_text_channel(self, interaction: discord.Interaction, ticketID: int):
         try:
-            channelname=f"ticket-{interaction.user}"
+            channelname=f"{await self.config.guild(interaction.guild).ticketChannelPrefix()}{interaction.user}"
             permissionOverwrite = {
                 interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
                 interaction.user: discord.PermissionOverwrite(view_channel=True)
             }
             channel = await interaction.guild.create_text_channel(name=channelname, category=discord.utils.get(interaction.guild.categories, id=int(await self.config.guild(interaction.guild).ticketCategory())), overwrites=permissionOverwrite)
-            await interaction.channel.typing()
-            await channel.send("Heyho")
             await self.config.guild(interaction.guild).tickets.set_raw(interaction.user.id, value={'channel': channel.id, 'zammadID': ticketID})
-            # msg = await interaction.client.wait_for('message', timeout=None)
-            # print(msg.content)
-            # if(msg.content == "close"):
-            #     await channel.delete()
+            return channel
         except Exception as error:
             embedFailure.description = f"# Fehler\n### Es ist folgenderA Fehler aufgetreten:\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)

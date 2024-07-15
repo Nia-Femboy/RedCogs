@@ -23,6 +23,7 @@ class Tickets(commands.Cog):
             user="None",
             password="None",
             embedTitle="Ticket",
+            ticketChannelPrefix="ticket-",
             embedDescription="Drücke auf den Button um ein neues Ticket zu erstellen",
             embedFooter="None",
             embedFooterURL="None",
@@ -48,6 +49,7 @@ class Tickets(commands.Cog):
         app_commands.Choice(name="Hostname", value="host"),
         app_commands.Choice(name="Username", value="user"),
         app_commands.Choice(name="Password", value="password"),
+        app_commands.Choice(name="Channel Prefix", value="channelPrefix"),
         app_commands.Choice(name="Embed Title", value="embedTitle"),
         app_commands.Choice(name="Embed Description", value="embedDescription"),
         app_commands.Choice(name="Embed Footer", value="embedFooter"),
@@ -83,6 +85,11 @@ class Tickets(commands.Cog):
 
                     await self.config.guild(interaction.guild).password.set(wert)
                     embedSuccess.description = embedSuccess.description + f"\n\n**__Password__**\n* {wert}"
+
+                case "channelPrefix":
+
+                    await self.config.guild(interaction.guild).ticketChannelPrefix.set(wert)
+                    embedSuccess.description = embedSuccess.description + f"\n\n**__Channel Prefix__**\n* {wert}"
 
                 case "embedTitle":
 
@@ -262,10 +269,11 @@ class Tickets(commands.Cog):
             if(message.author.bot == False):
                 for userID in await self.config.guild(message.guild).tickets():
                     if(await self.config.guild(message.guild).tickets.get_raw(userID, 'channel') == message.channel.id):
-                        if(message.content == "close" and userID == str(message.author.id)):
-                            await message.channel.delete()
-                            await self.config.guild(message.guild).tickets.clear_raw(userID)
-                        else:
-                            await message.channel.send("Nur der User darf das Ticket schließen")
+                        if(message.content == "/close"):
+                            if(userID == str(message.author.id)):
+                                await message.channel.delete()
+                                await self.config.guild(message.guild).tickets.clear_raw(userID)
+                            else:
+                                await message.channel.send("Nur der User darf das Ticket schließen")
         except Exception as error:
             print(f"Fehler bei on_message: {error}")
