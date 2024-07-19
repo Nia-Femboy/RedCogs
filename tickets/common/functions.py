@@ -69,3 +69,26 @@ class Functions():
             modal.message.placeholder = message_placeholder if message_placeholder != "" else modal.message.placeholder
         except Exception as error:
             print(f"Fehler bei update_modal: {error}")
+
+    async def add_panel(self, guild: discord.Guild, panelname: str):
+        await self.config.guild(guild).panels.set_raw(panelname,
+                                                      value={'host': "",
+                                                             'user': "",
+                                                             'password': "",
+                                                             'embedTitle': "Ticket",
+                                                             'ticketChannelPrefix': "ticket-",
+                                                             'embedDescription': "Drücke auf den Button um ein neues Ticket zu erstellen",
+                                                             'embedFooter': "None",
+                                                             'embedFooterURL': "None",
+                                                             'buttonLabel': "Neues Ticket erstellen",
+                                                             'modalTitle': "Ticket",
+                                                             'modalNameLabel': "Name",
+                                                             'modalNamePlaceholder': "Max Mustermann",
+                                                             'modalMailLabel': "E-Mail",
+                                                             'modalMailPlaceholder': "max@mustermann.de",
+                                                             'modalSubjectLabel': "Subject",
+                                                             'modalSubjectPlaceholder': "Trollen im Chat",
+                                                             'modalMessageLabel': "Message",
+                                                             'modalMessagePlaceholder': "Der User XXX trollt sämtliche User im Chat",
+                                                             'ticketCategory': 0,
+                                                             'panels': {}})

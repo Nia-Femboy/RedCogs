@@ -38,10 +38,23 @@ class Tickets(commands.Cog):
             modalMessageLabel="Message",
             modalMessagePlaceholder="Der User XXX trollt sämtliche User im Chat",
             ticketCategory=0,
+            panels={},
             tickets={}
     )
 
     tickets = app_commands.Group(name="ticket", description="Ticket commands")
+
+    @tickets.command(name="createpanel", description="Erstelle ein neues Panel")
+    @app_commands.describe(panelname="Name des Panel")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def createpanel(self, interaction: discord.Interaction, panelname: str):
+        try:
+            if(panelname.isalnum()):
+                Functions.add_panel(self, interaction.guild, panelname)
+            raise Exception("Es dürfen nur Buchstaben und Zahlen benutzt werden")
+        except Exception as error:
+            embedFailure.description = f"# Fehler\n### Es ist folgender Fehler aufgetreten:\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
     @tickets.command(name="setup", description="Konfiguriere das System")
     @app_commands.describe(option="Welche Option soll geändert werden?", wert="Der Wert welcher gesetzt werden soll")
@@ -262,6 +275,24 @@ class Tickets(commands.Cog):
 
         except Exception as error:
             print(error)
+
+    @tickets.command(name="close", description="Schließe ein Ticket")
+    async def close(self, interaction: discord.Interaction):
+        try:
+            if(not await self.config.guild(interaction.guild).tickets()):
+                raise Exception("Dieser Channel ist kein Ticket")
+            for userID in await self.config.guild(interaction.guild).tickets():
+                    if(await self.config.guild(interaction.guild).tickets.get_raw(userID, 'channel') == interaction.channel.id):
+                        if(userID == str(interaction.user.id)):
+                            await self.config.guild(interaction.guild).tickets.clear_raw(userID)
+                            await interaction.channel.delete()
+                            return
+                    else:
+                        raise Exception("Dieser Channel ist kein Ticket")
+            raise Exception("Du kannst dieses Ticket nicht schließen")
+        except Exception as error:
+            embedFailure.description = f"# Fehler\n### Es ist folgender Fehler aufgetreten:\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
     @commands.Cog.listener()
     async def on_message(self, message):
