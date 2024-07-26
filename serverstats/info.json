@@ -1,0 +1,17 @@
+{
+    "author": [
+        "Nia"
+    ],
+    "install_msg": "Serverstats wurde erfolgreich installiert",
+    "name": "Serverstats",
+    "short": "Mit diesem Cog ist es möglich Serverstats als Channelnamen anzuzeigen",
+    "description": "Es ist möglich mit diesem Cog Channel zu erstellen welche einzelne Serverstats anzeigen zu können",
+    "tags": [
+        "serverstats",
+        "channel",
+        "custom"
+    ],
+    "requirements": [
+        "discord"
+    ]
+}

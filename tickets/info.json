@@ -1,0 +1,17 @@
+{
+    "author": [
+        "Nia"
+    ],
+    "install_msg": "Tickets wurde erfolgreich installiert",
+    "name": "Tickets",
+    "short": "Mit diesem Cog ist es möglich Tickets zu erstellen",
+    "description": "Die Tickets können entweder direkt via Discord abgearbeitet werden, per E-Mail oder über einen externen Dienst mit entsprechender Schnittstelle",
+    "tags": [
+        "tickets",
+        "support",
+        "mail"
+    ],
+    "requirements": [
+        "zammad-py"
+    ]
+}

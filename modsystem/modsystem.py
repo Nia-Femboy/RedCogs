@@ -749,7 +749,14 @@ class Modsystem(commands.Cog):
                 await interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnPublicChannel())).send(embed=embedPublic)
 
             if(sendDMChannel):
-                await user.send(embed=embedDM)
+                try:
+                    await user.send(embed=embedDM)
+                except discord.HTTPException as error:
+                    if error.code == 50007:
+                        embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
+                        await interaction.followup.send(embed=embedLog, ephemeral=True)
+                        return
+                    raise Exception(error)
                 
             if user.avatar is not None:
                 embedLog.set_thumbnail(url=user.avatar.url)
@@ -891,9 +898,9 @@ class Modsystem(commands.Cog):
     async def softban(self, interaction: discord.Interaction, user: discord.Member):
         try:
             await interaction.response.defer(ephemeral=True)
-            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
+            if(interaction.user.top_role < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole())):
                 raise Exception("Du hast keine Berechtigung für diesen Befehl")
-            elif(interaction.user.top_role.position <= user.top_role.position):
+            elif(interaction.user.top_role <= user.top_role):
                 raise Exception("Du kannst keinen User mit einem höheren oder gleichen Rang Softbannen")
             elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).softBanChannel())) is None):
                 raise Exception("Kein gültiger Channel gesetzt")
@@ -901,7 +908,14 @@ class Modsystem(commands.Cog):
                 raise Exception("Dieser User ist bereits im Softban")
             await Functions.do_softban(user, interaction.guild.channels, await self.config.guild(interaction.guild).softBanChannel())
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=True)
-            await user.send(f"Du hast einen Softban auf **{interaction.guild.name}** bekommen")
+            try:
+                await user.send(f"Du hast einen Softban auf **{interaction.guild.name}** bekommen")
+            except discord.HTTPException as error:
+                if error.code == 50007:
+                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Softban Informiert werden"
+                    await interaction.followup.send(embed=embedLog, ephemeral=True)
+                    return
+                raise Exception(error)
             embedLog.description=f"{user.mention} hat von {interaction.user.mention} einen **Softban** bekommen"
             if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
                 await interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel()).send(embed=embedLog)
@@ -915,18 +929,25 @@ class Modsystem(commands.Cog):
 
     @app_commands.command(name="revokesoftban", description="Nimmt den Softban wieder zurück")
     @app_commands.describe(user="Der User bei dem der Softban wieder zurück genommen werden soll")
-    async def revokesoftban(self, interaction: discord.Interaction, user: discord.User):
+    async def revokesoftban(self, interaction: discord.Interaction, user: discord.Member):
         try:
             await interaction.response.defer(ephemeral=True)
-            if(interaction.user.top_role.position < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).position):
+            if(interaction.user.top_role < interaction.guild.get_role(await self.config.guild(interaction.guild).modRole())):
                 raise Exception("Du hast keine Berechtigung für diesen Befehl")
-            elif(interaction.user.top_role.position <= user.top_role.position):
+            elif(interaction.user.top_role <= user.top_role):
                 raise Exception("Du kannst keinen User mit einem höheren oder gleichen Rang Softbannen")
             elif(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned') == False):
                 raise Exception("Dieser User hat aktuell keinen Softban")
             await Functions.undo_softban(user, interaction.guild.channels)
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=False)
-            await user.send(f"Dein Softban auf **{interaction.guild.name}** wurde zurückgenommen")
+            try:
+                await user.send(f"Dein Softban auf **{interaction.guild.name}** wurde zurückgenommen")
+            except discord.HTTPException as error:
+                if error.code == 50007:
+                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über die Aufhebung des Softbans Informiert werden"
+                    await interaction.followup.send(embed=embedLog, ephemeral=True)
+                    return
+                raise Exception(error)
             embedLog.description=f"Der **Softban** von {user.mention} wurde von {interaction.user.mention} aufgehoben"
             if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
                 await interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel()).send(embed=embedLog)
@@ -944,14 +965,33 @@ class Modsystem(commands.Cog):
         try:
             if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung diesen Befehl auszuführen")
+            if(user.top_role > interaction.user.top_role):
+                raise Exception("Du kannst keinen User kicken der einen höheren oder gleichwertigen Rang hat als du")
             if(user.bot):
                 raise Exception("Du kannst keinen Bot kicken")
+            if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
+                channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel())
+            else:
+                channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).kickLogChannel())
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': 0})
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1})
             if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
-            user.kick(reason=reason)
+            try:
+                await user.send(f"Du wurdest von **{interaction.guild.name}** mit der Begründung **{reason}** gekickt")
+            except discord.HTTPException as error:
+                if error.code == 50007:
+                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
+                    await interaction.response.send_message(embed=embedLog, ephemeral=True)
+                    return
+                raise Exception(error)
+            global enableEvent
+            enableEvent = False
+            await user.kick(reason=reason)
+            embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** gekickt"
+            channel.send(embed=embedLog)
+            enableEvent = True
             embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
         except Exception as error:
@@ -959,19 +999,38 @@ class Modsystem(commands.Cog):
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
             
     @app_commands.command(name="ban", description="Banne einen User")
-    @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban")
-    async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str):
+    @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban", messagedelete="Die Anzahl der Tage welche Rückwirkend die Nachrichten des Users gelöscht werden sollen")
+    async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str, messagedelete: int = 1):
         try:
             if(interaction.user.top_role <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung")
+            if(user.top_role > interaction.user.top_role):
+                raise Exception("Du kannst keinen User bannen der einen höheren oder gleichwertigen Rang hat als du")
             if(user.bot):
                 raise Exception("Du kannst keinen Bot bannen")
+            if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
+                channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel())
+            else:
+                channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).kickLogChannel())
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': 0})
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage') + 1})
             if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
-            user.ban(reason=reason, delete_message_days=1)
+            try:
+                await user.send(f"Du wurdest von **{interaction.guild.name}** mit der Begründung **{reason}** gebant")
+            except discord.HTTPException as error:
+                if error.code == 50007:
+                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
+                    await interaction.response.send_message(embed=embedLog, ephemeral=True)
+                    return
+                raise Exception(error)
+            global enableEvent
+            enableEvent = False
+            await user.ban(reason=reason, delete_message_days=messagedelete)
+            embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** gebannt und die Nachrichten der letzten {messagedelete} Tage gelöscht"
+            channel.send(embed=embedLog)
+            enableEvent = True
             embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
         except Exception as error:
@@ -1027,6 +1086,38 @@ class Modsystem(commands.Cog):
             embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
 
+    @app_commands.command(description="Setze den User auf die Watchlist")
+    @app_commands.describe(user="Der User welcher beobachtet werden soll")
+    async def watch(self, interaction: discord.Interaction, user: discord.Member):
+        try:
+            #
+            #
+            #
+            #   User soll in Array eingetragen werden und bei änderung von Username, Profilbild, Displayname usw. eine Benachrichtigung in den Modlog channel gesendet werden (Weiter unten muss noch ein Listener erstellt/bearbeitet werden und oben evtl benötigte Variabeln)
+            #
+            #
+            #
+            print()
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
+    @app_commands.command(description="Entferne einen User von der Watchlist")
+    @app_commands.describe(user="Der User welcher von der Watchlist entfernt werden soll")
+    async def watch(self, interaction: discord.Interaction, user: discord.Member):
+        try:
+            #
+            #
+            #
+            #   Entfernt den User aus dem Array
+            #
+            #
+            #
+            print()
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
     @app_commands.command(name="help", description="Lass dir alle verfügbaren Befehle anzeigen")
     async def help(self, interaction: discord.Interaction):
         try:
@@ -1056,7 +1147,11 @@ class Modsystem(commands.Cog):
                                    f"* **/getprofilepic [user]**\n"
                                    f" * Lasse dir das Profilbild eines Nutzers ausgeben\n"
                                    f"* **/timeout <Minuten> [User] [Begründung]**\n"
-                                   f" * Geb dir selbst oder einem anderen User einen Timeout\n")
+                                   f" * Geb dir selbst oder einem anderen User einen Timeout\n"
+                                   f"* **/kick <Member <Begründung>**\n"
+                                   f" * Kicke einen User\n"
+                                   f"* **/ban <Member> <Reason [Delete Message Days]**\n"
+                                   f" * Banne einen User und lösche die letzten Nachrichten der X Tage, Standard 1 Tag\n")
                 if(app_commands.checks.has_permissions(administrator=True)):
                     embed.description += (f"### Setup\n"
                                     f"* **/modlog setupchannel <Modul> <ChannelID>**\n"
@@ -1128,39 +1223,14 @@ class Modsystem(commands.Cog):
                         embedLog.clear_fields()
         except Exception as error:
             print("Fehler im Auditlog: " + str(error))
-    
-    # async def get_invite_with_code(invite_list, code):
-    #     for inv in invite_list:
-    #         if inv.code == code:
-    #             return inv
-            
-    # async def init_user(self, member):
-    #     await self.config.guild(member.guild).users.set_raw(member.id, value={'displayName': member.display_name,
-    #                                                                               'username': member.name,
-    #                                                                               'currentReason': "-",
-    #                                                                               'currentPoints': 0,
-    #                                                                               'totalPoints': 0,
-    #                                                                               'firstWarn': "-",
-    #                                                                               'lastWarn': "-",
-    #                                                                               'warnCount': 0,
-    #                                                                               'kickCount': 0,
-    #                                                                               'softBanned': False,
-    #                                                                               'banned': False})
-        
-    # async def clear_user(self, member):
-    #     data = await self.config.guild(member.guild).users.get_raw(member.id)
-    #     timeDiff = datetime.now() - member.joined_at.replace(tzinfo=None)
-    #     oneDay = timedelta(days=1)
-    #     if(data.get('warnCount') == 0 and data.get('kickCount') == 0 and data.get('softBanned') == False and data.get('banned') == False and timeDiff <= oneDay ):
-    #         await self.config.guild(member.guild).users.clear_raw(member.id)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
         try:
             if(dict(await self.config.guild(member.guild).users()).get((str(member.id))) is None):
-                await Modsystem.init_user(self, member, member.guild)
+                await Functions.init_user(self, member, member.guild)
             if(await self.config.guild(member.guild).users.get_raw(member.id, 'softBanned')):
-                await Modsystem.do_softban(member, member.guild.channels, await self.config.guild(member.guild).softBanChannel())
+                await Functions.do_softban(member, member.guild.channels, await self.config.guild(member.guild).softBanChannel())
             if(await self.config.guild(member.guild).enableJoinLog()):
                 if(await self.config.guild(member.guild).useGeneralLogChannel() == True):
                     channel = member.guild.get_channel(await self.config.guild(member.guild).generalLogChannel())
@@ -1169,7 +1239,7 @@ class Modsystem(commands.Cog):
                 invites_after = await member.guild.invites()
                 usedInvite: discord.invite
                 for invite in await self.config.guild(member.guild).invites():
-                    result = await Modsystem.get_invite_with_code(invites_after, invite)
+                    result = await Functions.get_invite_with_code(invites_after, invite)
                     if(result is None):
                         await self.config.guild(member.guild).invites.clear_raw(invite)
                     else:
@@ -1349,9 +1419,10 @@ class Modsystem(commands.Cog):
     async def lower_spam_protection_counts(self):
         try:
             for guild in self.bot.guilds:
-                for userId in await self.config.guild(guild).spamProtection():
-                    if(await self.config.guild(userId).spamProtection.get_raw(userId, 'kickUsage') > 1):
-                        await self.config.guild(guild).spamProtection.set_raw(userId, 'kickUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'kickUsage') - 1)
+                if(await self.config.guild(guild).spamProtection() is not None):
+                    for userId in await self.config.guild(guild).spamProtection():
+                        if(await self.config.guild(userId).spamProtection.get_raw(userId, 'kickUsage') > 1):
+                            await self.config.guild(guild).spamProtection.set_raw(userId, 'kickUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'kickUsage') - 1)
         except Exception as error:
             print("Fehler bei Scheduled-Spam-Task: " + str(error))
 
