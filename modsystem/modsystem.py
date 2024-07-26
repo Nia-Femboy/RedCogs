@@ -755,7 +755,8 @@ class Modsystem(commands.Cog):
                     if error.code == 50007:
                         embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
                         await interaction.followup.send(embed=embedLog, ephemeral=True)
-                    raise Exception(error)
+                    else:
+                        raise Exception(error)
                 
             if user.avatar is not None:
                 embedLog.set_thumbnail(url=user.avatar.url)
