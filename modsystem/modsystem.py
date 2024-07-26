@@ -749,7 +749,14 @@ class Modsystem(commands.Cog):
                 await interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnPublicChannel())).send(embed=embedPublic)
 
             if(sendDMChannel):
-                await user.send(embed=embedDM)
+                try:
+                    await user.send(embed=embedDM)
+                except discord.HTTPException as error:
+                    if error.code == 50007:
+                        embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
+                        await interaction.followup.send(embed=embedLog, ephemeral=True)
+                        return
+                    raise Exception(error)
                 
             if user.avatar is not None:
                 embedLog.set_thumbnail(url=user.avatar.url)
@@ -901,7 +908,14 @@ class Modsystem(commands.Cog):
                 raise Exception("Dieser User ist bereits im Softban")
             await Functions.do_softban(user, interaction.guild.channels, await self.config.guild(interaction.guild).softBanChannel())
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=True)
-            await user.send(f"Du hast einen Softban auf **{interaction.guild.name}** bekommen")
+            try:
+                await user.send(f"Du hast einen Softban auf **{interaction.guild.name}** bekommen")
+            except discord.HTTPException as error:
+                if error.code == 50007:
+                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Softban Informiert werden"
+                    await interaction.followup.send(embed=embedLog, ephemeral=True)
+                    return
+                raise Exception(error)
             embedLog.description=f"{user.mention} hat von {interaction.user.mention} einen **Softban** bekommen"
             if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
                 await interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel()).send(embed=embedLog)
@@ -926,7 +940,14 @@ class Modsystem(commands.Cog):
                 raise Exception("Dieser User hat aktuell keinen Softban")
             await Functions.undo_softban(user, interaction.guild.channels)
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=False)
-            await user.send(f"Dein Softban auf **{interaction.guild.name}** wurde zurückgenommen")
+            try:
+                await user.send(f"Dein Softban auf **{interaction.guild.name}** wurde zurückgenommen")
+            except discord.HTTPException as error:
+                if error.code == 50007:
+                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über die Aufhebung des Softbans Informiert werden"
+                    await interaction.followup.send(embed=embedLog, ephemeral=True)
+                    return
+                raise Exception(error)
             embedLog.description=f"Der **Softban** von {user.mention} wurde von {interaction.user.mention} aufgehoben"
             if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
                 await interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel()).send(embed=embedLog)
@@ -953,6 +974,14 @@ class Modsystem(commands.Cog):
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1})
             if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
+            try:
+                await user.send(f"Du wurdest von **{interaction.guild.name}** mit der Begründung **{reason}** gekickt")
+            except discord.HTTPException as error:
+                if error.code == 50007:
+                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
+                    await interaction.response.send_message(embed=embedLog, ephemeral=True)
+                    return
+                raise Exception(error)
             await user.kick(reason=reason)
             embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
@@ -975,6 +1004,14 @@ class Modsystem(commands.Cog):
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage') + 1})
             if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
+            try:
+                await user.send(f"Du wurdest von **{interaction.guild.name}** mit der Begründung **{reason}** gebant")
+            except discord.HTTPException as error:
+                if error.code == 50007:
+                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
+                    await interaction.response.send_message(embed=embedLog, ephemeral=True)
+                    return
+                raise Exception(error)
             await user.ban(reason=reason, delete_message_days=messagedelete)
             embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
