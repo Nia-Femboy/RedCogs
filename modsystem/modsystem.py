@@ -16,6 +16,7 @@ from PIL import Image
 embedSuccess = discord.Embed(title="Erfolgreich", description="Es wurden folgende Werte gesetzt:", color=0x0ffc03)
 embedFailure = discord.Embed(title="Fehler", color=0xff0000)
 embedLog = discord.Embed(title="Modsystem", color=0xfc7f03)
+embedLogError = discord.Embed(color=0xfc7f03)
 
 enableEvent = True
 
@@ -753,8 +754,8 @@ class Modsystem(commands.Cog):
                     await user.send(embed=embedDM)
                 except discord.HTTPException as error:
                     if error.code == 50007:
-                        embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
-                        await interaction.followup.send(embed=embedLog, ephemeral=True)
+                        embedLogError.description=f"# Fehler\n### Es ist folgender Fehler aufgetreten:\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
+                        await interaction.followup.send(embed=embedLogError, ephemeral=True)
                     else:
                         raise Exception(error)
                 
