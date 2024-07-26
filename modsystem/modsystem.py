@@ -969,6 +969,10 @@ class Modsystem(commands.Cog):
                 raise Exception("Du kannst keinen User kicken der einen höheren oder gleichwertigen Rang hat als du")
             if(user.bot):
                 raise Exception("Du kannst keinen Bot kicken")
+            if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
+                channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel())
+            else:
+                channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).kickLogChannel())
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': 0})
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1})
@@ -982,7 +986,12 @@ class Modsystem(commands.Cog):
                     await interaction.response.send_message(embed=embedLog, ephemeral=True)
                     return
                 raise Exception(error)
+            global enableEvent
+            enableEvent = False
             await user.kick(reason=reason)
+            embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** gekickt"
+            channel.send(embed=embedLog)
+            enableEvent = True
             embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
         except Exception as error:
@@ -999,6 +1008,10 @@ class Modsystem(commands.Cog):
                 raise Exception("Du kannst keinen User bannen der einen höheren oder gleichwertigen Rang hat als du")
             if(user.bot):
                 raise Exception("Du kannst keinen Bot bannen")
+            if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
+                channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel())
+            else:
+                channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).kickLogChannel())
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': 0})
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage') + 1})
@@ -1012,7 +1025,12 @@ class Modsystem(commands.Cog):
                     await interaction.response.send_message(embed=embedLog, ephemeral=True)
                     return
                 raise Exception(error)
+            global enableEvent
+            enableEvent = False
             await user.ban(reason=reason, delete_message_days=messagedelete)
+            embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** gebannt und die Nachrichten der letzten {messagedelete} Tage gelöscht"
+            channel.send(embed=embedLog)
+            enableEvent = True
             embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
         except Exception as error:
@@ -1129,7 +1147,11 @@ class Modsystem(commands.Cog):
                                    f"* **/getprofilepic [user]**\n"
                                    f" * Lasse dir das Profilbild eines Nutzers ausgeben\n"
                                    f"* **/timeout <Minuten> [User] [Begründung]**\n"
-                                   f" * Geb dir selbst oder einem anderen User einen Timeout\n")
+                                   f" * Geb dir selbst oder einem anderen User einen Timeout\n"
+                                   f"* **/kick <Member <Begründung>**\n"
+                                   f" * Kicke einen User\n"
+                                   f"* **/ban <Member> <Reason [Delete Message Days]**\n"
+                                   f" * Banne einen User und lösche die letzten Nachrichten der X Tage, Standard 1 Tag\n")
                 if(app_commands.checks.has_permissions(administrator=True)):
                     embed.description += (f"### Setup\n"
                                     f"* **/modlog setupchannel <Modul> <ChannelID>**\n"
