@@ -990,7 +990,7 @@ class Modsystem(commands.Cog):
             global enableEvent
             enableEvent = False
             await user.kick(reason=reason)
-            embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** gekickt"
+            embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** via Bot gekickt"
             channel.send(embed=embedLog)
             enableEvent = True
             embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
