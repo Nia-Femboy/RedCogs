@@ -1386,7 +1386,7 @@ class Modsystem(commands.Cog):
     async def on_voice_state_update(self, member, before, after):
         try:
             if(await self.config.guild(member.guild).enableVoiceLog()):
-                if(before.channel is not None and after.channel is None):
+                if(before.channel is not None):
                     await before.channel.send(f"**{member.display_name}** hat den Channel verlassen")
         except Exception as error:
             print("Fehler bei Voice-Log: " + str(error))
