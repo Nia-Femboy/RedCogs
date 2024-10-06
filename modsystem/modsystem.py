@@ -990,7 +990,7 @@ class Modsystem(commands.Cog):
             global enableEvent
             enableEvent = False
             await user.kick(reason=reason)
-            embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** gekickt"
+            embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** via Bot gekickt"
             channel.send(embed=embedLog)
             enableEvent = True
             embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
@@ -1386,7 +1386,7 @@ class Modsystem(commands.Cog):
     async def on_voice_state_update(self, member, before, after):
         try:
             if(await self.config.guild(member.guild).enableVoiceLog()):
-                if(before.channel is not None and after.channel is None):
+                if(before.channel is not None):
                     await before.channel.send(f"**{member.display_name}** hat den Channel verlassen")
         except Exception as error:
             print("Fehler bei Voice-Log: " + str(error))
