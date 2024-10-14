@@ -759,7 +759,7 @@ class Modsystem(commands.Cog):
                     else:
                         raise Exception(error)
                 
-            if user.avatar is not None:
+            if (user.avatar is not None):
                 embedLog.set_thumbnail(url=user.avatar.url)
             await interaction.guild.get_channel(int(await self.config.guild(interaction.guild).warnLogChannel())).send(embed=embedLog)
             embedLog.set_thumbnail(url=None)
@@ -1030,7 +1030,7 @@ class Modsystem(commands.Cog):
             enableEvent = False
             await user.ban(reason=reason, delete_message_days=messagedelete)
             embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** gebannt und die Nachrichten der letzten {messagedelete} Tage gelöscht"
-            channel.send(embed=embedLog)
+            await channel.send(embed=embedLog)
             enableEvent = True
             embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
@@ -1386,7 +1386,7 @@ class Modsystem(commands.Cog):
     async def on_voice_state_update(self, member, before, after):
         try:
             if(await self.config.guild(member.guild).enableVoiceLog()):
-                if(before.channel is not None):
+                if(before.channel is not None and before.channel is not after.channel):
                     await before.channel.send(f"**{member.display_name}** hat den Channel verlassen")
         except Exception as error:
             print("Fehler bei Voice-Log: " + str(error))
