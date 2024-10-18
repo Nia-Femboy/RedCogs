@@ -998,6 +998,7 @@ class Modsystem(commands.Cog):
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            print("Fehler bei Kick: " + str(error))
             
     @app_commands.command(name="ban", description="Banne einen User")
     @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban", messagedelete="Die Anzahl der Tage welche Rückwirkend die Nachrichten des Users gelöscht werden sollen")
@@ -1037,6 +1038,7 @@ class Modsystem(commands.Cog):
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            print("Fehler bei Ban: " + str(error))
 
     @modsystem.command(name="inituser", description="Initialisiere alle fehlenden User")
     @app_commands.checks.has_permissions(administrator=True)
@@ -1086,6 +1088,7 @@ class Modsystem(commands.Cog):
         except Exception as error:
             embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            print("Fehler bei Timeout: " + str(error))
 
     @app_commands.command(description="Setze den User auf die Watchlist")
     @app_commands.describe(user="Der User welcher beobachtet werden soll")
