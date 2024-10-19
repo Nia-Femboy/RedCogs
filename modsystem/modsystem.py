@@ -1251,22 +1251,25 @@ class Modsystem(commands.Cog):
                             usedInvite = result
                             usedInviteInfo = await self.bot.fetch_invite(result.code)
                             break
-                await self.config.guild(member.guild).invites.set_raw(usedInvite.code, value={'count': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'count') + 1, 'uses': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'uses') + 1})
-                await self.config.guild(member.guild).invites.set_raw(member.id, value={'invitecode': usedInvite.code})
-                embedLog.set_thumbnail(url=member.display_avatar.url)
-                embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** von {usedInvite.inviter.mention} beigetreten\n\n"
-                             f"Informationen zu dem Invite:\n"
-                             f"* Benutzungen: **{usedInvite.uses}**\n"
-                             f"* Channel: {usedInvite.channel.mention}\n"
-                             f"* Geblieben: **{await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'count')}**\n"
-                             f"* Mitglieder: **{usedInviteInfo.approximate_member_count}**\n"
-                             f"* Zurzeit aktiv: **{usedInviteInfo.approximate_presence_count}**\n"
-                             f"* Läuft ab am: ")
-                if(usedInvite.expires_at is None):
-                    embedString += "**Niemals**\n"
+                if(usedInvite is None):
+                    embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist via Discord Discovery beigetreten")
                 else:
-                    embedString += f"**{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\n"
-                embedString += f"* Link: **[Join]({usedInvite.url})**"
+                    await self.config.guild(member.guild).invites.set_raw(usedInvite.code, value={'count': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'count') + 1, 'uses': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'uses') + 1})
+                    await self.config.guild(member.guild).invites.set_raw(member.id, value={'invitecode': usedInvite.code})
+                    embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** von {usedInvite.inviter.mention} beigetreten\n\n"
+                                f"Informationen zu dem Invite:\n"
+                                f"* Benutzungen: **{usedInvite.uses}**\n"
+                                f"* Channel: {usedInvite.channel.mention}\n"
+                                f"* Geblieben: **{await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'count')}**\n"
+                                f"* Mitglieder: **{usedInviteInfo.approximate_member_count}**\n"
+                                f"* Zurzeit aktiv: **{usedInviteInfo.approximate_presence_count}**\n"
+                                f"* Läuft ab am: ")
+                    if(usedInvite.expires_at is None):
+                        embedString += "**Niemals**\n"
+                    else:
+                        embedString += f"**{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\n"
+                    embedString += f"* Link: **[Join]({usedInvite.url})**"
+                embedLog.set_thumbnail(url=member.display_avatar.url)
                 embedLog.description=embedString
                 await channel.send(embed=embedLog)
                 embedLog.set_thumbnail(url=None)
