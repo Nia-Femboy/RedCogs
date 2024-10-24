@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 
 class Functions():
 
-    async def init_user(self, member: discord.Member, guild: discord.Guild):
-            if(dict(await self.config.guild(guild).users()).get(str(member.id)) is None):
+    async def init_user(self, member: discord.Member):
+            if(dict(await self.config.guild(member.guild).users()).get(str(member.id)) is None):
                 await self.config.guild(member.guild).users.set_raw(member.id, value={'displayName': member.display_name,
                                                                                       'username': member.name,
                                                                                       'currentReason': "-",
@@ -17,6 +17,20 @@ class Functions():
                                                                                       'kickCount': 0,
                                                                                       'softBanned': False,
                                                                                       'banned': False})
+    
+    async def init_spamProtection_user(self, member: discord.Member):
+        await self.config.guild(member.guild).spamProtection.set_raw(member.id, value={'warnUsage': 0,
+                                                                                        'kickUsage': 0,
+                                                                                        'tempbanUsage': 0,
+                                                                                        'softbanUsage': 0,
+                                                                                        'banUsage': 0})
+    
+    async def init_usageLog_user(self, member: discord.Member):
+        await self.config.guild(member.guild).usageLog.set_raw(member.id, value={'warnUsage': 0,
+                                                                                  'kickUsage': 0,
+                                                                                  'tempbanUsage': 0,
+                                                                                  'softbanUsage': 0,
+                                                                                  'banUsage': 0})
             
     async def get_invite_with_code(invite_list, code):
             for inv in invite_list:
