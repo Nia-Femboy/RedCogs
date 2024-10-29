@@ -549,6 +549,7 @@ class Modsystem(commands.Cog):
                                f"Softban Log-Channel: <#{await self.config.guild(interaction.guild).softBanLogChannel()}>\n"
                                f"### Status:\n"
                                f"Warn funktion  aktiviert: **{await self.config.guild(interaction.guild).enableWarn()}**\n"
+                               f"Timeout Funktion aktiviert: **{await self.config.guild(interaction.guild).enableTimeoutCommand()}**\n"
                                f"Kick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\n"
                                f"Ban-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\n"
                                f"Update-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\n"
@@ -1069,7 +1070,7 @@ class Modsystem(commands.Cog):
         try:
             await interaction.response.defer(ephemeral=True)
             for user in interaction.guild.members:
-                await Functions.init_user(self, user, interaction.guild)
+                await Functions.init_user(self, user)
             embedLog.description=f"Es wurden alle Fehlenden User erfolgreich angelegt"
             await interaction.followup.send(embed=embedLog)
         except Exception as error:
@@ -1417,6 +1418,9 @@ class Modsystem(commands.Cog):
             if(await self.config.guild(member.guild).enableVoiceLog()):
                 if(before.channel is not None and before.channel is not after.channel):
                     await before.channel.send(f"**{member.display_name}** hat den Channel verlassen")
+            if(await self.config.guild(member.guild).enableAutoChannel()):
+                for channel in discord.utils.get(member.guild.categories, await self.config.guild(member.guild).autoChannelCategroy()).voice_channels:
+                    print(channel.name)
         except Exception as error:
             print("Fehler bei Voice-Log: " + str(error))
 
@@ -1451,9 +1455,9 @@ class Modsystem(commands.Cog):
             for guild in self.bot.guilds:
                 if(await self.config.guild(guild).spamProtection() is not None):
                     for userId in await self.config.guild(guild).spamProtection():
-                        if(await self.config.guild(userId).spamProtection.get_raw(userId, 'kickUsage') > 0):
+                        if(await self.config.guild(guild).spamProtection.get_raw(userId, 'kickUsage') > 0):
                             await self.config.guild(guild).spamProtection.set_raw(userId, 'kickUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'kickUsage') - 1)
-                        if(await self.config.guild(userId).spamProtection.get_raw(userId, 'banUsage') > 0):
+                        if(await self.config.guild(guild).spamProtection.get_raw(userId, 'banUsage') > 0):
                             await self.config.guild(guild).spamProtection.set_raw(userId, 'banUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'banUsage') - 1)
         except Exception as error:
             print("Fehler bei Scheduled-Spam-Task: " + str(error))
