@@ -20,17 +20,17 @@ class Functions():
     
     async def init_spamProtection_user(self, member: discord.Member):
         await self.config.guild(member.guild).spamProtection.set_raw(member.id, value={'warnUsage': 0,
-                                                                                        'kickUsage': 0,
-                                                                                        'tempbanUsage': 0,
-                                                                                        'softbanUsage': 0,
-                                                                                        'banUsage': 0})
+                                                                                       'kickUsage': 0,
+                                                                                       'tempbanUsage': 0,
+                                                                                       'softbanUsage': 0,
+                                                                                       'banUsage': 0})
     
     async def init_usageLog_user(self, member: discord.Member):
         await self.config.guild(member.guild).usageLog.set_raw(member.id, value={'warnUsage': 0,
-                                                                                  'kickUsage': 0,
-                                                                                  'tempbanUsage': 0,
-                                                                                  'softbanUsage': 0,
-                                                                                  'banUsage': 0})
+                                                                                 'kickUsage': 0,
+                                                                                 'tempbanUsage': 0,
+                                                                                 'softbanUsage': 0,
+                                                                                 'banUsage': 0})
             
     async def get_invite_with_code(invite_list, code):
             for inv in invite_list:
