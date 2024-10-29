@@ -993,7 +993,7 @@ class Modsystem(commands.Cog):
             else:
                 channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).kickLogChannel())
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
-                await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': 0})
+                await Functions.init_spamProtection_user(self, interaction.user)
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1})
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
                 await Functions.init_usageLog_user(self, interaction.user)
@@ -1012,7 +1012,7 @@ class Modsystem(commands.Cog):
             enableEvent = False
             await user.kick(reason=reason)
             embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** via Bot gekickt"
-            channel.send(embed=embedLog)
+            await channel.send(embed=embedLog)
             enableEvent = True
             embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
             await interaction.response.send_message(embed=embedLog, ephemeral=True)
