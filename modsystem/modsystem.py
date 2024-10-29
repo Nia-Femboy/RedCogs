@@ -1256,7 +1256,7 @@ class Modsystem(commands.Cog):
     async def on_member_join(self, member):
         try:
             if(dict(await self.config.guild(member.guild).users()).get((str(member.id))) is None):
-                await Functions.init_user(self, member, member.guild)
+                await Functions.init_user(self, member)
             if(await self.config.guild(member.guild).users.get_raw(member.id, 'softBanned')):
                 await Functions.do_softban(member, member.guild.channels, await self.config.guild(member.guild).softBanChannel())
             if(await self.config.guild(member.guild).enableJoinLog()):
