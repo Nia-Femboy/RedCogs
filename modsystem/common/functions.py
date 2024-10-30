@@ -19,14 +19,18 @@ class Functions():
                                                                                       'banned': False})
     
     async def init_spamProtection_user(self, member: discord.Member):
-        await self.config.guild(member.guild).spamProtection.set_raw(member.id, value={'warnUsage': 0,
+        await self.config.guild(member.guild).spamProtection.set_raw(member.id, value={'moveUsage': 0,
+                                                                                       'warnUsage': 0,
+                                                                                       'timeoutUsage': 0,
                                                                                        'kickUsage': 0,
                                                                                        'tempbanUsage': 0,
                                                                                        'softbanUsage': 0,
                                                                                        'banUsage': 0})
     
     async def init_usageLog_user(self, member: discord.Member):
-        await self.config.guild(member.guild).usageLog.set_raw(member.id, value={'warnUsage': 0,
+        await self.config.guild(member.guild).usageLog.set_raw(member.id, value={'moveUsage': 0,
+                                                                                 'warnUsage': 0,
+                                                                                 'timeoutUsage': 0,
                                                                                  'kickUsage': 0,
                                                                                  'tempbanUsage': 0,
                                                                                  'softbanUsage': 0,

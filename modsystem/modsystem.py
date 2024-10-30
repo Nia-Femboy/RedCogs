@@ -62,8 +62,10 @@ class Modsystem(commands.Cog):
             linkPattern=r"https?:\/\/.*\..{2,}",
             saveDeletedPics=False,
             enableTimeoutCommand=False,
+            maxTimeoutPerMinute=0,
             maxKicksPerMinute=0,
             maxBansPerMinute=0,
+            userBanMessage="Du wurdest von **{interaction.guild.name}** mit der Begründung **{reason}** gebant",
             users={},
             staff={},
             roles={},
@@ -507,12 +509,12 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def setupprotection(self, interaction: discord.Interaction, choice: app_commands.Choice[str], wert: int):
         try:
-            match(wert):
+            match(choice):
 
                 case "maxTimeoutCount":
 
-                    await self.config.guild(interaction.guild).test
-                    embedSuccess.add_field(name="Max Timeout Coun", value=wert)
+                    await self.config.guild(interaction.guild).maxTimeoutPerMinute.set(wert)
+                    embedSuccess.add_field(name="Max Timeout Count", value=wert)
 
                 case "maxKickCount":
 
@@ -522,7 +524,28 @@ class Modsystem(commands.Cog):
                 case "maxBanCount":
 
                     await self.config.guild(interaction.guild).maxBansPerMinute.set(wert)
-                    embedSuccess.add_field(name="Max Ban Count")
+                    embedSuccess.add_field(name="Max Ban Count", value=wert)
+
+            await interaction.response.send_message(embed=embedSuccess)
+            embedSuccess.clear_fields()
+        except Exception as error:
+            embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
+            await interaction.response.send_message(embed=embedFailure)
+
+    @modsystem.command(name="setupmessages", description="Setup der Messages")
+    @app_commands.describe(message="Setzte die Nachricht")
+    @app_commands.choices(choice=[
+        app_commands.Choice(name="User Ban Message", value="userBanMessage")
+    ])
+    @app_commands.checks.has_permissions(administrator=True)
+    async def setupmessages(self, interaction: discord.Interaction, choice: app_commands.Choice[str], message: str):
+        try:
+            match(choice):
+
+                case "userBanMessage":
+
+                    await self.config.guild(interaction.guild).userBanMessage.set(message)
+                    embedSuccess.add_field(name="User Ban Message", value=message)
 
             await interaction.response.send_message(embed=embedSuccess)
             embedSuccess.clear_fields()
@@ -572,7 +595,7 @@ class Modsystem(commands.Cog):
                                f"Stufe 2 Multiplikator: **{await self.config.guild(interaction.guild).warnSecondMultiplicator()}**\n"
                                f"Stufe 3 Multiplikator: **{await self.config.guild(interaction.guild).warnThirdMultiplicator()}**\n"
                                f"### Anti-Nuke:\n"
-                               f"Maximale Timeouts pro Minute:\n"
+                               f"Maximale Timeouts pro Minute: **{await self.config.guild(interaction.guild).maxTimeoutPerMinute()}**\n"
                                f"Maximale Kicks pro Minute: **{await self.config.guild(interaction.guild).maxKicksPerMinute()}**\n"
                                f"Maximale Bans pro Minute: **{await self.config.guild(interaction.guild).maxBansPerMinute()}**\n"
                                f"### General:\n"
@@ -582,7 +605,8 @@ class Modsystem(commands.Cog):
                 embed.description += (f"Modrolle: {interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).mention}\n")
             else:
                 embed.description += (f"Modrolle: **Keine gültige Rolle gesetzt**\n")
-            embed.description += (f"Link detection pattern: `{await self.config.guild(interaction.guild).linkPattern()}`")
+            embed.description += (f"Link detection pattern: `{await self.config.guild(interaction.guild).linkPattern()}`"
+                                  f"User Ban Message: `{await self.config.guild(interaction.guild).userBanMessage()}`")
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
@@ -629,11 +653,11 @@ class Modsystem(commands.Cog):
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'warnUsage': 0})
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'warnUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'warnUsage') + 1})
+            if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'warnUsage')):
+                raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
                 await Functions.init_usageLog_user(self, interaction.user)
             await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, value={'warnUsage': await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'warnUsage') + 1})
-            if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'warnUsage')):
-                raise Exception("Spam erkannt -> Abbruch")
             embedResponse = discord.Embed(title="Aktion Erfolgreich", color=0x0ffc03)
             embedPublic = discord.Embed(color=0xfc7f03)
             embedDM = discord.Embed(title=f"{interaction.guild.name}'s Warnsystem", color=0xff0000)
@@ -920,11 +944,11 @@ class Modsystem(commands.Cog):
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'softbanUsage': 0})
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'softbanUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'softbanUsage') + 1})
+            if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'softbanUsage')):
+                raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
                 await Functions.init_usageLog_user(self, interaction.user)
             await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, value={'softbanUsage': await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'softbanUsage') + 1})
-            if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'softbanUsage')):
-                raise Exception("Spam erkannt -> Abbruch")
             await Functions.do_softban(user, interaction.guild.channels, await self.config.guild(interaction.guild).softBanChannel())
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=True)
             try:
@@ -995,11 +1019,11 @@ class Modsystem(commands.Cog):
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await Functions.init_spamProtection_user(self, interaction.user)
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'kickUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1})
+            if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage')):
+                raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
                 await Functions.init_usageLog_user(self, interaction.user)
             await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, value={'kickUsage': await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'kickUsage') + 1})
-            if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage')):
-                raise Exception("Spam erkannt -> Abbruch")
             try:
                 await user.send(f"Du wurdest von **{interaction.guild.name}** mit der Begründung **{reason}** gekickt")
             except discord.HTTPException as error:
@@ -1038,13 +1062,13 @@ class Modsystem(commands.Cog):
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await Functions.init_spamProtection_user(self, interaction.user)
             await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'banUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage') + 1})
+            if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage')):
+                raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
                 await Functions.init_usageLog_user(self, interaction.user)
             await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, value={'banUsage': await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'banUsage') + 1})
-            if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage')):
-                raise Exception("Spam erkannt -> Abbruch")
             try:
-                await user.send(f"Du wurdest von **{interaction.guild.name}** mit der Begründung **{reason}** gebant")
+                await user.send(f"{await self.config.guild(interaction.guild).userBanMessage()}")
             except discord.HTTPException as error:
                 if error.code == 50007:
                     embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
@@ -1099,6 +1123,14 @@ class Modsystem(commands.Cog):
         try:
             if(await self.config.guild(interaction.guild).enableTimeoutCommand() is not True):
                 raise Exception("Funktion nicht aktiviert")
+            if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
+                await Functions.init_spamProtection_user(self, interaction.user)
+            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'timeoutUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'timeoutUsage') + 1})
+            if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'timeoutUsage')):
+                raise Exception("Spam erkannt -> Abbruch")
+            if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
+                await Functions.init_usageLog_user(self, interaction.user)
+            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, value={'timeoutUsage': await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'timeoutUsage') + 1})
             timeout_until = datetime.now().astimezone() + timedelta(minutes=minutes)
             if(user is not None):
                 if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
@@ -1275,9 +1307,8 @@ class Modsystem(commands.Cog):
                             usedInvite = result
                             usedInviteInfo = await self.bot.fetch_invite(result.code)
                             break
-                if(usedInvite is None):
                     embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist via Discord Discovery beigetreten")
-                else:
+                if(usedInvite):
                     await self.config.guild(member.guild).invites.set_raw(usedInvite.code, value={'count': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'count') + 1, 'uses': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'uses') + 1})
                     await self.config.guild(member.guild).invites.set_raw(member.id, value={'invitecode': usedInvite.code})
                     embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** von {usedInvite.inviter.mention} beigetreten\n\n"
@@ -1293,6 +1324,8 @@ class Modsystem(commands.Cog):
                     else:
                         embedString += f"**{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\n"
                     embedString += f"* Link: **[Join]({usedInvite.url})**"
+                else:
+                    embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist via Discord Discovery beigetreten")
                 embedLog.set_thumbnail(url=member.display_avatar.url)
                 embedLog.description=embedString
                 await channel.send(embed=embedLog)
