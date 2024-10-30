@@ -652,12 +652,12 @@ class Modsystem(commands.Cog):
                 raise Exception("Warn nicht möglich da der User im Softban ist")
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await Functions.init_spamProtection_user(self, interaction.user)
-            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, value={'warnUsage': await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'warnUsage') + 1})
+            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, 'warnUsage', value=await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'warnUsage') + 1)
             if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'warnUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
                 await Functions.init_usageLog_user(self, interaction.user)
-            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, value={'warnUsage': await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'warnUsage') + 1})
+            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'warnUsage', value=await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'warnUsage') + 1)
             embedResponse = discord.Embed(title="Aktion Erfolgreich", color=0x0ffc03)
             embedPublic = discord.Embed(color=0xfc7f03)
             embedDM = discord.Embed(title=f"{interaction.guild.name}'s Warnsystem", color=0xff0000)
@@ -948,7 +948,7 @@ class Modsystem(commands.Cog):
                 raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
                 await Functions.init_usageLog_user(self, interaction.user)
-            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'softbanUsage', value={await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'softbanUsage') + 1})
+            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'softbanUsage', value=await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'softbanUsage') + 1)
             await Functions.do_softban(user, interaction.guild.channels, await self.config.guild(interaction.guild).softBanChannel())
             await self.config.guild(interaction.guild).users.set_raw(user.id, 'softBanned', value=True)
             try:
@@ -1023,7 +1023,7 @@ class Modsystem(commands.Cog):
                 raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
                 await Functions.init_usageLog_user(self, interaction.user)
-            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'kickUsage', value={await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'kickUsage') + 1})
+            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'kickUsage', value=await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'kickUsage') + 1)
             try:
                 await user.send(f"Du wurdest von **{interaction.guild.name}** mit der Begründung **{reason}** gekickt")
             except discord.HTTPException as error:
@@ -1066,7 +1066,7 @@ class Modsystem(commands.Cog):
                 raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
                 await Functions.init_usageLog_user(self, interaction.user)
-            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'banUsage', value={await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'banUsage') + 1})
+            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'banUsage', value=await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'banUsage') + 1)
             try:
                 await user.send(f"{await self.config.guild(interaction.guild).userBanMessage()}")
             except discord.HTTPException as error:
@@ -1130,7 +1130,7 @@ class Modsystem(commands.Cog):
                 raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
                 await Functions.init_usageLog_user(self, interaction.user)
-            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'timeoutUsage', value={await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'timeoutUsage') + 1})
+            await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'timeoutUsage', value=await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'timeoutUsage') + 1)
             timeout_until = datetime.now().astimezone() + timedelta(minutes=minutes)
             if(user is not None):
                 if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
