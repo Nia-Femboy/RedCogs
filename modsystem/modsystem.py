@@ -1311,10 +1311,6 @@ class Modsystem(commands.Cog):
                             break
                     embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist via Discord Discovery beigetreten")
                 try:
-                    usedInvite
-                except Exception as error:
-                    print("asd -> " + str(error))
-                if(usedInvite):
                     await self.config.guild(member.guild).invites.set_raw(usedInvite.code, value={'count': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'count') + 1, 'uses': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'uses') + 1})
                     await self.config.guild(member.guild).invites.set_raw(member.id, value={'invitecode': usedInvite.code})
                     embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist mit dem Invite-Code **{usedInvite.code}** von {usedInvite.inviter.mention} beigetreten\n\n"
@@ -1330,7 +1326,7 @@ class Modsystem(commands.Cog):
                     else:
                         embedString += f"**{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\n"
                     embedString += f"* Link: **[Join]({usedInvite.url})**"
-                else:
+                except Exception as error:
                     embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist via Discord Discovery beigetreten")
                 embedLog.set_thumbnail(url=member.display_avatar.url)
                 embedLog.description=embedString
