@@ -605,7 +605,7 @@ class Modsystem(commands.Cog):
                 embed.description += (f"Modrolle: {interaction.guild.get_role(await self.config.guild(interaction.guild).modRole()).mention}\n")
             else:
                 embed.description += (f"Modrolle: **Keine gültige Rolle gesetzt**\n")
-            embed.description += (f"Link detection pattern: `{await self.config.guild(interaction.guild).linkPattern()}`"
+            embed.description += (f"Link detection pattern: `{await self.config.guild(interaction.guild).linkPattern()}`\n"
                                   f"User Ban Message: `{await self.config.guild(interaction.guild).userBanMessage()}`")
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
@@ -943,7 +943,7 @@ class Modsystem(commands.Cog):
                 raise Exception("Dieser User ist bereits im Softban")
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await Functions.init_spamProtection_user(self, interaction.user)
-            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, 'softbanUsage', value={await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'softbanUsage') + 1})
+            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, 'softbanUsage', value=await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'softbanUsage') + 1)
             if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'softbanUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
@@ -1018,7 +1018,7 @@ class Modsystem(commands.Cog):
                 channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).kickLogChannel())
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await Functions.init_spamProtection_user(self, interaction.user)
-            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, 'kickUsage', value={await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1})
+            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, 'kickUsage', value=await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage') + 1)
             if(await self.config.guild(interaction.guild).maxKicksPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'kickUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
@@ -1061,7 +1061,7 @@ class Modsystem(commands.Cog):
                 channel = interaction.guild.get_channel(await self.config.guild(interaction.guild).kickLogChannel())
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await Functions.init_spamProtection_user(self, interaction.user)
-            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, 'banUsage', value={await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage') + 1})
+            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, 'banUsage', value=await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage') + 1)
             if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'banUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
@@ -1125,7 +1125,7 @@ class Modsystem(commands.Cog):
                 raise Exception("Funktion nicht aktiviert")
             if(dict(await self.config.guild(interaction.guild).spamProtection()).get(str(interaction.user.id)) is None):
                 await Functions.init_spamProtection_user(self, interaction.user)
-            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, 'timeoutUsage', value={await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'timeoutUsage') + 1})
+            await self.config.guild(interaction.guild).spamProtection.set_raw(interaction.user.id, 'timeoutUsage', value=await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'timeoutUsage') + 1)
             if(await self.config.guild(interaction.guild).maxBansPerMinute() >= await self.config.guild(interaction.guild).spamProtection.get_raw(interaction.user.id, 'timeoutUsage')):
                 raise Exception("Spam erkannt -> Abbruch")
             if(dict(await self.config.guild(interaction.guild).usageLog()).get(str(interaction.user.id)) is None):
@@ -1232,7 +1232,9 @@ class Modsystem(commands.Cog):
                                     f"* **/modloge setmodrole <role>**\n"
                                     f" * Setze die Modrolle\n"
                                     f"* **/modlog setupprotection <Setting> <int>**\n"
-                                    f" * Setze die Anti-Nuke Settings")
+                                    f" * Setze die Anti-Nuke Settings\n"
+                                    f"* **/modlog setmessages <MessageType> <Message>**\n"
+                                    f" * Setzte eigene Nachrichten")
             embed.set_footer(text=f"Das Serverteam von {interaction.guild.name}", icon_url=interaction.guild.icon.url)
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as error:
@@ -1308,6 +1310,10 @@ class Modsystem(commands.Cog):
                             usedInviteInfo = await self.bot.fetch_invite(result.code)
                             break
                     embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist via Discord Discovery beigetreten")
+                try:
+                    usedInvite
+                except Exception as error:
+                    print("asd -> " + str(error))
                 if(usedInvite):
                     await self.config.guild(member.guild).invites.set_raw(usedInvite.code, value={'count': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'count') + 1, 'uses': await self.config.guild(member.guild).invites.get_raw(usedInvite.code, 'uses') + 1})
                     await self.config.guild(member.guild).invites.set_raw(member.id, value={'invitecode': usedInvite.code})
@@ -1488,8 +1494,18 @@ class Modsystem(commands.Cog):
             for guild in self.bot.guilds:
                 if(await self.config.guild(guild).spamProtection() is not None):
                     for userId in await self.config.guild(guild).spamProtection():
+                        if(await self.config.guild(guild).spamProtection.get_raw(userId, 'moveUsage') > 0):
+                            await self.config.guild(guild).spamProtection.set_raw(userId, 'moveUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'moveUsage') - 1)
+                        if(await self.config.guild(guild).spamProtection.get_raw(userId, 'warnUsage') > 0):
+                            await self.config.guild(guild).spamProtection.set_raw(userId, 'warnUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'warnUsage') - 1)
+                        if(await self.config.guild(guild).spamProtection.get_raw(userId, 'timeoutUsage') > 0):
+                            await self.config.guild(guild).spamProtection.set_raw(userId, 'timeoutUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'timeoutUsage') - 1)
                         if(await self.config.guild(guild).spamProtection.get_raw(userId, 'kickUsage') > 0):
                             await self.config.guild(guild).spamProtection.set_raw(userId, 'kickUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'kickUsage') - 1)
+                        if(await self.config.guild(guild).spamProtection.get_raw(userId, 'tempbanUsage') > 0):
+                            await self.config.guild(guild).spamProtection.set_raw(userId, 'tempbanUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'tempbanUsage') - 1)
+                        if(await self.config.guild(guild).spamProtection.get_raw(userId, 'softbanUsage') > 0):
+                            await self.config.guild(guild).spamProtection.set_raw(userId, 'softbanUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'softbanUsage') - 1)
                         if(await self.config.guild(guild).spamProtection.get_raw(userId, 'banUsage') > 0):
                             await self.config.guild(guild).spamProtection.set_raw(userId, 'banUsage', value=await self.config.guild(guild).spamProtection.get_raw(userId, 'banUsage') - 1)
         except Exception as error:
