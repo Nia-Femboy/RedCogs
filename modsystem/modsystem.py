@@ -65,7 +65,7 @@ class Modsystem(commands.Cog):
             maxTimeoutPerMinute=0,
             maxKicksPerMinute=0,
             maxBansPerMinute=0,
-            userBanMessage="Du wurdest von **{interaction.guild.name}** mit der Begründung **{reason}** gebant",
+            userBanMessage="Du wurdest von **{{teamMember}}** mit der Begründung **{{reason}}** gebant",
             users={},
             staff={},
             roles={},
@@ -1068,7 +1068,7 @@ class Modsystem(commands.Cog):
                 await Functions.init_usageLog_user(self, interaction.user)
             await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'banUsage', value=await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'banUsage') + 1)
             try:
-                await user.send(f"{await self.config.guild(interaction.guild).userBanMessage()}")
+                await user.send(f"{(await self.config.guild(interaction.guild).userBanMessage()).replace("{guild}", "interaction.guild.name").replace("{reason}", "reason")}")
             except discord.HTTPException as error:
                 if error.code == 50007:
                     embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
@@ -1164,7 +1164,7 @@ class Modsystem(commands.Cog):
 
     @app_commands.command(description="Entferne einen User von der Watchlist")
     @app_commands.describe(user="Der User welcher von der Watchlist entfernt werden soll")
-    async def watch(self, interaction: discord.Interaction, user: discord.Member):
+    async def unwatch(self, interaction: discord.Interaction, user: discord.Member):
         try:
             #
             #
@@ -1327,7 +1327,7 @@ class Modsystem(commands.Cog):
                         embedString += f"**{(usedInvite.expires_at).strftime('%d-%m-%Y')}** um **{(usedInvite.expires_at).strftime('%H:%M')} Uhr**\n"
                     embedString += f"* Link: **[Join]({usedInvite.url})**"
                 except Exception as error:
-                    embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist via Discord Discovery beigetreten")
+                    embedString=(f"Der Account {member.mention} wurde am **{(member.created_at).strftime('%d-%m-%Y')}** um **{(member.created_at).strftime('%H:%M')} Uhr** erstellt und ist via **Discord Discovery** beigetreten")
                 embedLog.set_thumbnail(url=member.display_avatar.url)
                 embedLog.description=embedString
                 await channel.send(embed=embedLog)
@@ -1340,7 +1340,7 @@ class Modsystem(commands.Cog):
         try:
             inviteCode = await self.config.guild(data.user.guild).invites.get_raw(data.user.id, 'invitecode')
             await self.config.guild(data.user.guild).invites.clear_raw(data.user.id)
-            await self.config.guild(data.user.guild).invites.set_raw(inviteCode, value={'count': await self.config.guild(data.user.guild).invites.get_raw(inviteCode, 'count') - 1, 'uses': await self.config.guild(data.user.guild).invites.get_raw(inviteCode, 'uses')})
+            await self.config.guild(data.user.guild).invites.set_raw(inviteCode, 'count', value=await self.config.guild(data.user.guild).invites.get_raw(inviteCode, 'count') - 1)
             await Functions.clear_user(self, data.user)
         except Exception as error:
             print("Fehler bei Member-Remove: " + str(error))
@@ -1454,8 +1454,25 @@ class Modsystem(commands.Cog):
                 if(before.channel is not None and before.channel is not after.channel):
                     await before.channel.send(f"**{member.display_name}** hat den Channel verlassen")
             if(await self.config.guild(member.guild).enableAutoChannel()):
-                for channel in discord.utils.get(member.guild.categories, await self.config.guild(member.guild).autoChannelCategroy()).voice_channels:
-                    print(channel.name)
+                if(dict(await self.config.guild(member.guild).autoChannelEntry())):
+                    for entry in await self.config.guild(member.guild).autoChannelEntry():
+                        category = await self.config.guild(member.guild).autoChannelEntry.get_raw(entry, 'category')
+                        position = await self.config.guild(member.guild).autoChannelEntry.get_raw(entry, 'position')
+                        name = await self.config.guild(member.guild).autoChannelEntry.get_raw(entry, 'name')
+                        channelList = await self.config.guild(member.guild).autoChannelEntry.get_raw(entry, 'channelList')
+                        minChannel = await self.config.guild(member.guild).autoChannelEntry.get_raw(entry, 'minChannel')
+                        emptyChannels = []
+                        for channel in channelList:
+                            if not(member.guild.get_channel(channel).members):
+                                emptyChannels.append(channel)
+                        if(len(emptyChannels) < 1):
+                            if(position is "top"):
+                                finalPosition = len(channelList)
+                            else:
+                                finalPosition = 999
+                            member.guild.create_voice_channel(name=name, reason="AutoChannel", category=category, bitrate=384, user_limit=25, video_quality_mode="full", position=finalPosition)
+                        elif(len(emptyChannels) > 1 and len(channelList > minChannel)):
+                            member.guild.get_channel(emptyChannels[-1]).delete(reason="AutoChannel")
         except Exception as error:
             print("Fehler bei Voice-Log: " + str(error))
 
