@@ -1068,7 +1068,8 @@ class Modsystem(commands.Cog):
                 await Functions.init_usageLog_user(self, interaction.user)
             await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'banUsage', value=await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'banUsage') + 1)
             try:
-                await user.send(f"{(await self.config.guild(interaction.guild).userBanMessage()).replace("{guild}", "interaction.guild.name").replace("{reason}", "reason")}")
+                message = await self.config.guild(interaction.guild).userBanMessage()
+                await user.send(f"{message}")
             except discord.HTTPException as error:
                 if error.code == 50007:
                     embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
