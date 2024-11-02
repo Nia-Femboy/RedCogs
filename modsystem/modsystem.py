@@ -509,7 +509,7 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def setupprotection(self, interaction: discord.Interaction, choice: app_commands.Choice[str], wert: int):
         try:
-            match(choice):
+            match(choice.value):
 
                 case "maxTimeoutCount":
 
@@ -540,7 +540,7 @@ class Modsystem(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def setupmessages(self, interaction: discord.Interaction, choice: app_commands.Choice[str], message: str):
         try:
-            match(choice):
+            match(choice.value):
 
                 case "userBanMessage":
 
