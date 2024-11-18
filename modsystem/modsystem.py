@@ -9,7 +9,7 @@ from discord.ext import tasks
 
 from .common.functions import Functions
 
-from redbot.core import commands, app_commands, Config
+from redbot.core import commands, app_commands, Config, data_manager
 from datetime import datetime, timedelta, timezone
 from PIL import Image
 
@@ -24,6 +24,7 @@ class Modsystem(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.databasePath = data_manager.cog_data_path(self).joinpath('database.db')
         self.config = Config.get_conf(self, identifier=518963742)
         self.config.register_guild(
             generalLogChannel=0,
@@ -73,7 +74,8 @@ class Modsystem(commands.Cog):
             spamProtection={},
             spamProtectionWhitelistedRoles={},
             spamProtectionWhitelistedAccounts={},
-            usageLog={}
+            usageLog={},
+            permissionGroups={}
         )
 
     modsystem = app_commands.Group(name="modlog", description="Modlog setup commands")
@@ -635,6 +637,7 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Schwer", value=3)
     ]))
     @app_commands.describe(user="Der User der verwarnt werden soll", reason="Grund der Verwarnung", stufe="Die Schwere der Verwarnung (Optional)", timeout="Die länge des Timeout in Minuten (Optional)")
+    #@app_commands.context_menu(name="Verwarne einen User")
     async def warn(self, interaction: discord.Interaction, user: discord.Member, reason: str, stufe: app_commands.Choice[int] = 0, timeout: app_commands.Range[int, 1, 40320] = 0):
         try:
             await interaction.response.defer(ephemeral=True)
@@ -930,6 +933,7 @@ class Modsystem(commands.Cog):
 
     @app_commands.command(name="softban", description="Softbanne einen User")
     @app_commands.describe(user="Der User der einen Softban bekommen soll")
+    #@app_commands.context_menu(name="Softbanne einen User")
     async def softban(self, interaction: discord.Interaction, user: discord.Member):
         try:
             await interaction.response.defer(ephemeral=True)
@@ -957,8 +961,8 @@ class Modsystem(commands.Cog):
                 if error.code == 50007:
                     embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Softban Informiert werden"
                     await interaction.followup.send(embed=embedLog, ephemeral=True)
-                    return
-                raise Exception(error)
+                else:
+                    raise Exception(error)
             embedLog.description=f"{user.mention} hat von {interaction.user.mention} einen **Softban** bekommen"
             if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
                 await interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel()).send(embed=embedLog)
@@ -972,6 +976,7 @@ class Modsystem(commands.Cog):
 
     @app_commands.command(name="revokesoftban", description="Nimmt den Softban wieder zurück")
     @app_commands.describe(user="Der User bei dem der Softban wieder zurück genommen werden soll")
+    #@app_commands.context_menu(name="Nimm einen Softban zurück")
     async def revokesoftban(self, interaction: discord.Interaction, user: discord.Member):
         try:
             await interaction.response.defer(ephemeral=True)
@@ -989,8 +994,8 @@ class Modsystem(commands.Cog):
                 if error.code == 50007:
                     embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über die Aufhebung des Softbans Informiert werden"
                     await interaction.followup.send(embed=embedLog, ephemeral=True)
-                    return
-                raise Exception(error)
+                else:
+                    raise Exception(error)
             embedLog.description=f"Der **Softban** von {user.mention} wurde von {interaction.user.mention} aufgehoben"
             if(await self.config.guild(interaction.guild).useGeneralLogChannel()):
                 await interaction.guild.get_channel(await self.config.guild(interaction.guild).generalLogChannel()).send(embed=embedLog)
@@ -1004,8 +1009,10 @@ class Modsystem(commands.Cog):
             
     @app_commands.command(name="kick", description="Kicke einen User")
     @app_commands.describe(user="Der User welcher gekickt werden soll", reason="Die Begründung für den Kick")
+    #@app_commands.context_menu(name="Kicke einen User")
     async def kick(self, interaction: discord.Interaction, user: discord.Member, reason: str):
         try:
+            await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung diesen Befehl auszuführen")
             if(user.top_role > interaction.user.top_role):
@@ -1028,10 +1035,10 @@ class Modsystem(commands.Cog):
                 await user.send(f"Du wurdest von **{interaction.guild.name}** mit der Begründung **{reason}** gekickt")
             except discord.HTTPException as error:
                 if error.code == 50007:
-                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
-                    await interaction.response.send_message(embed=embedLog, ephemeral=True)
-                    return
-                raise Exception(error)
+                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Kick Informiert werden"
+                    await interaction.followup.send(embed=embedLog, ephemeral=True)
+                else:
+                    raise Exception(error)
             global enableEvent
             enableEvent = False
             await user.kick(reason=reason)
@@ -1039,16 +1046,18 @@ class Modsystem(commands.Cog):
             await channel.send(embed=embedLog)
             enableEvent = True
             embedLog.description=f"Es wurde folgender User gekickt: {user.mention}"
-            await interaction.response.send_message(embed=embedLog, ephemeral=True)
+            await interaction.followup.send(embed=embedLog, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
-            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            await interaction.followup.send(embed=embedFailure, ephemeral=True)
             print("Fehler bei Kick: " + str(error))
             
     @app_commands.command(name="ban", description="Banne einen User")
     @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban", messagedelete="Die Anzahl der Tage welche Rückwirkend die Nachrichten des Users gelöscht werden sollen")
+    #@app_commands.context_menu(name="Banne einen User")
     async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str, messagedelete: int = 1):
         try:
+            await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung")
             if(user.top_role > interaction.user.top_role):
@@ -1068,14 +1077,14 @@ class Modsystem(commands.Cog):
                 await Functions.init_usageLog_user(self, interaction.user)
             await self.config.guild(interaction.guild).usageLog.set_raw(interaction.user.id, 'banUsage', value=await self.config.guild(interaction.guild).usageLog.get_raw(interaction.user.id, 'banUsage') + 1)
             try:
-                message = await self.config.guild(interaction.guild).userBanMessage()
+                message: str = str(await self.config.guild(interaction.guild).userBanMessage()).replace("{reason}", reason).replace("{servername}", interaction.guild.name).replace("\\n", "\n")
                 await user.send(f"{message}")
             except discord.HTTPException as error:
                 if error.code == 50007:
-                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Warn Informiert werden"
-                    await interaction.response.send_message(embed=embedLog, ephemeral=True)
-                    return
-                raise Exception(error)
+                    embedLog.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{user.mention} hat den Bot blockiert und konnte daher nicht über den Ban Informiert werden"
+                    await interaction.followup.send(embed=embedLog, ephemeral=True)
+                else:
+                    raise Exception(error)
             global enableEvent
             enableEvent = False
             await user.ban(reason=reason, delete_message_days=messagedelete)
@@ -1083,10 +1092,10 @@ class Modsystem(commands.Cog):
             await channel.send(embed=embedLog)
             enableEvent = True
             embedLog.description=f"Es wurde folgender User gebannt: {user.mention}"
-            await interaction.response.send_message(embed=embedLog, ephemeral=True)
+            await interaction.followup.send(embed=embedLog, ephemeral=True)
         except Exception as error:
             embedFailure.description=f"**Es ist folgender Fehler aufgetreten:**\n\n{error}"
-            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+            await interaction.followup.send(embed=embedFailure, ephemeral=True)
             print("Fehler bei Ban: " + str(error))
 
     @modsystem.command(name="inituser", description="Initialisiere alle fehlenden User")
@@ -1104,6 +1113,7 @@ class Modsystem(commands.Cog):
 
     @app_commands.command(name="getprofilepic", description="Lass dir das aktuelle Profilbild des Users ausgeben")
     @app_commands.describe(user="Der User dessen Profilbild du haben möchtest")
+    #@app_commands.context_menu(name="Bekomme das Profilbild eines Users")
     async def getprofilepic(self, interaction: discord.Interaction, user: discord.Member = None):
         try:
             if(interaction.user.top_role < interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
@@ -1120,6 +1130,7 @@ class Modsystem(commands.Cog):
 
     @app_commands.command(description="Geb dir oder einem anderen einen Timeout")
     @app_commands.describe(minutes="Die Minuten wie lange der Timeout sein soll", user="Der User welchen den Timeout bekommen soll (Staff only)", reason="Die Begründung für den  Timeout (Staff only)")
+    #@app_commands.context_menu(name="Timeoute einen User")
     async def timeout(self, interaction: discord.Interaction, minutes: app_commands.Range[int, 1, 40320], user: discord.Member = None, reason: str = ""):
         try:
             if(await self.config.guild(interaction.guild).enableTimeoutCommand() is not True):
@@ -1175,6 +1186,31 @@ class Modsystem(commands.Cog):
             #
             #
             print()
+        except Exception as error:
+            embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
+            await interaction.response.send_message(embed=embedFailure, ephemeral=True)
+
+    @modsystem.command(description="Add Permission to User")
+    @app_commands.choices(permission=([
+        app_commands.Choice(name="", value="getProfilePic"),
+        app_commands.Choice(name="", value="clearchat"),
+        app_commands.Choice(name="", value="warn"),
+        app_commands.Choice(name="", value="watch"),
+        app_commands.Choice(name="", value="unwatch"),
+        app_commands.Choice(name="", value="timeout"),
+        app_commands.Choice(name="", value="kick"),
+        app_commands.Choice(name="", value="softban"),
+        app_commands.Choice(name="", value="revokesoftban"),
+        app_commands.Choice(name="", value="tempban"),
+        app_commands.Choice(name="", value="ban"),
+        app_commands.Choice(name="", value="revokeban")
+    ]))
+    @app_commands.checks.has_permissions(administrator=True)
+    async def addplayerpermission(self, interaction: discord.Interaction, user: discord.Member, permission: app_commands.Choice[str]):
+        try:
+
+            print("asd")
+
         except Exception as error:
             embedFailure.description=f"Es ist folgender  Fehler aufgetreten:**\n\n{error}**"
             await interaction.response.send_message(embed=embedFailure, ephemeral=True)
