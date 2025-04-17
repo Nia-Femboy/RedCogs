@@ -1,6 +1,6 @@
 import discord
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 class Functions():
 
@@ -8,6 +8,7 @@ class Functions():
             if(dict(await self.config.guild(member.guild).users()).get(str(member.id)) is None):
                 await self.config.guild(member.guild).users.set_raw(member.id, value={'displayName': member.display_name,
                                                                                       'username': member.name,
+                                                                                      'permissions': 0,
                                                                                       'currentReason': "-",
                                                                                       'currentPoints': 0,
                                                                                       'totalPoints': 0,
@@ -15,6 +16,7 @@ class Functions():
                                                                                       'lastWarn': "-",
                                                                                       'warnCount': 0,
                                                                                       'kickCount': 0,
+                                                                                      'timeout': False,
                                                                                       'softBanned': False,
                                                                                       'banned': False})
     

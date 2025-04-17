@@ -19,6 +19,7 @@ embedLog = discord.Embed(title="Modsystem", color=0xfc7f03)
 embedLogError = discord.Embed(color=0xfc7f03)
 
 enableEvent = True
+silentPing = discord.AllowedMentions.none()
 
 class Modsystem(commands.Cog):
 
@@ -34,6 +35,8 @@ class Modsystem(commands.Cog):
             enableKickLog=False,
             banLogChannel=0,
             enableBanLog=False,
+            unBanLogChannel=0,
+            enableUnBanLog=False,
             updateLogChannel=0,
             enableUpdateLog=False,
             useGeneralLogChannel=True,
@@ -87,6 +90,7 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Warn Logchannel", value="wChannel"),
         app_commands.Choice(name="Kick Logchannel", value="kChannel"),
         app_commands.Choice(name="Ban Logchannel", value="bChannel"),
+        app_commands.Choice(name="UnBan Logchannel", value="ubChannel"),
         app_commands.Choice(name="Update Logchannel", value="uChannel"),
         app_commands.Choice(name="Join Logchannel", value="jChannel"),
         app_commands.Choice(name="Message Logchannel", value="mChannel"),
@@ -122,6 +126,11 @@ class Modsystem(commands.Cog):
 
                     await self.config.guild(interaction.guild).banLogChannel.set(channel.id)
                     embedSuccess.add_field(name="Ban Log Channel", value=f"<#{channel.id}>")
+
+                case "ubChannel":
+
+                    await self.config.guild(interaction.guild).unBanLogChannel.set(channel.id)
+                    embedSuccess.add_field(name="UnBan Log Channel", value=f"<#{channel.id}>")
 
                 case "uChannel":
 
@@ -170,6 +179,7 @@ class Modsystem(commands.Cog):
         app_commands.Choice(name="Warnfunktion", value="warn"),
         app_commands.Choice(name="Kicklog", value="kLog"),
         app_commands.Choice(name="Banlog", value="bLog"),
+        app_commands.Choice(name="UnBanLog", value="ubLog"),
         app_commands.Choice(name="Updatelog", value="uLog"),
         app_commands.Choice(name="Joinlog", value="jLog"),
         app_commands.Choice(name="Messagelog", value="mLog"),
@@ -259,6 +269,23 @@ class Modsystem(commands.Cog):
                     else:
                         await self.config.guild(interaction.guild).enableBanLog.set(status)
                         embedSuccess.add_field(name="Ban Log", value=status)
+
+                case "ubLog":
+
+                    if(status):
+                        if(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel()):
+                            await self.config.guild(interaction.guild).enableUnBanLog.set(status)
+                            embedSuccess.add_field(name="UnBan Log", value=status)
+                        elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).unBanLogChannel())) is not None and await self.config.guild(interaction.guild).useGeneralLogChannel() == False):
+                            await self.config.guild(interaction.guild).enableUnBanLog.set(status)
+                            embedSuccess.add_field(name="UnBan Log", value=status)
+                        elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).generalLogChannel())) is None and await self.config.guild(interaction.guild).useGeneralLogChannel()):
+                            raise Exception("Kein gültiger genereller Channel definiert")
+                        elif(interaction.guild.get_channel(int(await self.config.guild(interaction.guild).unBanLogChannel())) is None):
+                            raise Exception("Kein Gültiger Channel angegeben")
+                    else:
+                        await self.config.guild(interaction.guild).enableUnBanLog.set(status)
+                        embedSuccess.add_field(name="UnBan Log", value=status)
 
                 case "uLog":
 
@@ -567,6 +594,7 @@ class Modsystem(commands.Cog):
                                f"Warn Public Channel: <#{await self.config.guild(interaction.guild).warnPublicChannel()}>\n"
                                f"Kick Log-Channel: <#{await self.config.guild(interaction.guild).kickLogChannel()}>\n"
                                f"Ban Log-Channel: <#{await self.config.guild(interaction.guild).banLogChannel()}>\n"
+                               f"UnBan Log-Channel: <#{await self.config.guild(interaction.guild).unBanLogChannel()}>\n"
                                f"Update Log-Channel: <#{await self.config.guild(interaction.guild).updateLogChannel()}>\n"
                                f"Join Log-Channel: <#{await self.config.guild(interaction.guild).joinLogChannel()}>\n"
                                f"Delete Message Log-Channel: <#{await self.config.guild(interaction.guild).deleteMessageLogChannel()}>\n"
@@ -577,6 +605,7 @@ class Modsystem(commands.Cog):
                                f"Timeout Funktion aktiviert: **{await self.config.guild(interaction.guild).enableTimeoutCommand()}**\n"
                                f"Kick-Log: **{await self.config.guild(interaction.guild).enableKickLog()}**\n"
                                f"Ban-Log: **{await self.config.guild(interaction.guild).enableBanLog()}**\n"
+                               f"UnBan-Log: **{await self.config.guild(interaction.guild).enableUnBanLog()}**\n"
                                f"Update-Log: **{await self.config.guild(interaction.guild).enableUpdateLog()}**\n"
                                f"Join-Log: **{await self.config.guild(interaction.guild).enableJoinLog()}**\n"
                                f"Delete  Message-Log: **{await self.config.guild(interaction.guild).enableDeleteMessageLog()}**\n"
@@ -1055,7 +1084,7 @@ class Modsystem(commands.Cog):
     @app_commands.command(name="ban", description="Banne einen User")
     @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban", messagedelete="Die Anzahl der Tage welche Rückwirkend die Nachrichten des Users gelöscht werden sollen")
     #@app_commands.context_menu(name="Banne einen User")
-    async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str, messagedelete: int = 1):
+    async def ban(self, interaction: discord.Interaction, user: discord.User, reason: str, messagedelete: int = 1):
         try:
             await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
@@ -1087,7 +1116,7 @@ class Modsystem(commands.Cog):
                     raise Exception(error)
             global enableEvent
             enableEvent = False
-            await user.ban(reason=reason, delete_message_days=messagedelete)
+            await interaction.guild.ban(user.id, delete_message_days=messagedelete)
             embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** gebannt und die Nachrichten der letzten {messagedelete} Tage gelöscht"
             await channel.send(embed=embedLog)
             enableEvent = True
@@ -1320,6 +1349,13 @@ class Modsystem(commands.Cog):
                         embedLog.add_field(name="Verbleibende Zeit", value=timeout_time, inline=True)
                         await channel.send(embed=embedLog)
                         embedLog.clear_fields()
+                elif(entry.action == discord.AuditLogAction.unban and await self.config.guild(entry.guild).enableUnBanLog()):
+                    if(await self.config.guild(entry.guild).useGeneralLogChannel()):
+                        channel = entry.guild.get_channel(await self.config.guild(entry.guild).generalLogChannel())
+                    else:
+                        channel = entry.guild.get_channel(await self.config.guild(entry.guild).unBanLogChannel())
+                    embedLog.description=entry.target.mention + " wurde von " + entry.user.mention + " entbannt"
+                    await channel.send(embed=embedLog)
         except Exception as error:
             print("Fehler im Auditlog: " + str(error))
 
@@ -1489,7 +1525,7 @@ class Modsystem(commands.Cog):
         try:
             if(await self.config.guild(member.guild).enableVoiceLog()):
                 if(before.channel is not None and before.channel is not after.channel):
-                    await before.channel.send(f"**{member.display_name}** hat den Channel verlassen")
+                    await before.channel.send(f"**{member.mention}** hat den Channel verlassen", allowed_mentions=silentPing)
             if(await self.config.guild(member.guild).enableAutoChannel()):
                 if(dict(await self.config.guild(member.guild).autoChannelEntry())):
                     for entry in await self.config.guild(member.guild).autoChannelEntry():
@@ -1592,7 +1628,7 @@ class Modsystem(commands.Cog):
         try:
             for guild in self.bot.guilds:
                 for user in guild.members:
-                    await Functions.init_user(self, user, guild)
+                    await Functions.init_user(self, user)
                 Modsystem.lower_spam_protection_counts.start(self)
                 if(await self.config.guild(guild).enableWarn()):
                     Modsystem.remove_warn_points.start(self)
