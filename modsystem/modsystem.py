@@ -19,7 +19,7 @@ embedLog = discord.Embed(title="Modsystem", color=0xfc7f03)
 embedLogError = discord.Embed(color=0xfc7f03)
 
 enableEvent = True
-silentPing = discord.AllowedMentions.none()
+silentPing = discord.AllowedMentions.users=False
 
 class Modsystem(commands.Cog):
 
