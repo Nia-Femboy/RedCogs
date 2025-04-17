@@ -1221,18 +1221,18 @@ class Modsystem(commands.Cog):
 
     @modsystem.command(description="Add Permission to User")
     @app_commands.choices(permission=([
-        app_commands.Choice(name="", value="getProfilePic"),
-        app_commands.Choice(name="", value="clearchat"),
-        app_commands.Choice(name="", value="warn"),
-        app_commands.Choice(name="", value="watch"),
-        app_commands.Choice(name="", value="unwatch"),
-        app_commands.Choice(name="", value="timeout"),
-        app_commands.Choice(name="", value="kick"),
-        app_commands.Choice(name="", value="softban"),
-        app_commands.Choice(name="", value="revokesoftban"),
-        app_commands.Choice(name="", value="tempban"),
-        app_commands.Choice(name="", value="ban"),
-        app_commands.Choice(name="", value="revokeban")
+        app_commands.Choice(name="Get profile pic", value="getProfilePic"),
+        app_commands.Choice(name="Cleat chat", value="clearchat"),
+        app_commands.Choice(name="Warn", value="warn"),
+        app_commands.Choice(name="Watch", value="watch"),
+        app_commands.Choice(name="Unwatch", value="unwatch"),
+        app_commands.Choice(name="Timeout", value="timeout"),
+        app_commands.Choice(name="Kick", value="kick"),
+        app_commands.Choice(name="Softban", value="softban"),
+        app_commands.Choice(name="Revoke softban", value="revokesoftban"),
+        app_commands.Choice(name="Tempban", value="tempban"),
+        app_commands.Choice(name="Ban", value="ban"),
+        app_commands.Choice(name="Revoke ban", value="revokeban")
     ]))
     @app_commands.checks.has_permissions(administrator=True)
     async def addplayerpermission(self, interaction: discord.Interaction, user: discord.Member, permission: app_commands.Choice[str]):
