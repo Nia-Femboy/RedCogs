@@ -1,11 +1,15 @@
 import discord
 import re
+import discord.ext.commands
 import requests
 import os
 import io
+import typing
 
 from discord.utils import MISSING
 from discord.ext import tasks
+
+import discord.ext
 
 from .common.functions import Functions
 
@@ -678,6 +682,8 @@ class Modsystem(commands.Cog):
                 raise Exception("Du kannst keine Leute verwarnen die einen höheren oder gleichwertigen Rang haben wie du")
             if(user.bot):
                 raise Exception("Du kannst keinen Bot verwarnen")
+            if(await self.config.guild(interaction.guild).users.get_raw(user.id) is None):
+                await Functions.init_user(self, user)
             if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'banned')):
                 raise Exception("Warn nicht möglich da der User bereits gebannt ist")
             if(await self.config.guild(interaction.guild).users.get_raw(user.id, 'softBanned')):
@@ -1070,7 +1076,7 @@ class Modsystem(commands.Cog):
                     raise Exception(error)
             global enableEvent
             enableEvent = False
-            await user.kick(reason=reason)
+            await user.kick(reason=f"{reason} -> {interaction.user.name}")
             embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** via Bot gekickt"
             await channel.send(embed=embedLog)
             enableEvent = True
@@ -1082,10 +1088,11 @@ class Modsystem(commands.Cog):
             print("Fehler bei Kick: " + str(error))
             
     @app_commands.command(name="ban", description="Banne einen User")
-    @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban", messagedelete="Die Anzahl der Tage welche Rückwirkend die Nachrichten des Users gelöscht werden sollen")
+    @app_commands.describe(userstr="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban", messagedelete="Die Anzahl der Tage welche Rückwirkend die Nachrichten des Users gelöscht werden sollen")
     #@app_commands.context_menu(name="Banne einen User")
-    async def ban(self, interaction: discord.Interaction, user: discord.User, reason: str, messagedelete: int = 1):
+    async def ban(self, interaction: discord.Interaction, userstr: typing.Union[discord.Member, discord.User], reason: str, messagedelete: int = 1):
         try:
+            user = await commands.UserConverter.convert(interaction.context, userstr)
             await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung")
@@ -1116,7 +1123,7 @@ class Modsystem(commands.Cog):
                     raise Exception(error)
             global enableEvent
             enableEvent = False
-            await interaction.guild.ban(user.id, delete_message_days=messagedelete)
+            await user.ban(reason=f"{reason} -> {interaction.user.name}", delete_message_days=messagedelete)
             embedLog.description=f"{user.mention} wurde von {interaction.user.mention} mit der Begründung **{reason}** gebannt und die Nachrichten der letzten {messagedelete} Tage gelöscht"
             await channel.send(embed=embedLog)
             enableEvent = True
@@ -1552,8 +1559,9 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_member_unban(self, guild, user):
         try:
-            if(dict(await self.config.guild(guild).users()).get(str(user.id)) is not None):
-                await self.config.guild(guild).users.set_raw(user.id, 'banned', value=False)
+            if(dict(await self.config.guild(guild).users()).get(str(user.id)) is None):
+                await Functions.init_user(self, user)
+            await self.config.guild(guild).users.set_raw(user.id, 'banned', value=False)
         except Exception as error:
             print("Fehler bei Member-Unban: " + str(error))
 
@@ -1627,8 +1635,6 @@ class Modsystem(commands.Cog):
     async def on_ready(self):
         try:
             for guild in self.bot.guilds:
-                for user in guild.members:
-                    await Functions.init_user(self, user)
                 Modsystem.lower_spam_protection_counts.start(self)
                 if(await self.config.guild(guild).enableWarn()):
                     Modsystem.remove_warn_points.start(self)
