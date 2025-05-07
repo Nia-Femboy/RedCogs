@@ -1090,9 +1090,8 @@ class Modsystem(commands.Cog):
     @app_commands.command(name="ban", description="Banne einen User")
     @app_commands.describe(userstr="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban", messagedelete="Die Anzahl der Tage welche Rückwirkend die Nachrichten des Users gelöscht werden sollen")
     #@app_commands.context_menu(name="Banne einen User")
-    async def ban(self, interaction: discord.Interaction, userstr: typing.Union[discord.Member, discord.User], reason: str, messagedelete: int = 1):
+    async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str, messagedelete: int = 1):
         try:
-            user = await commands.UserConverter.convert(interaction.context, userstr)
             await interaction.response.defer(ephemeral=True)
             if(interaction.user.top_role <  interaction.guild.get_role(int(await self.config.guild(interaction.guild).modRole()))):
                 raise Exception("Keine Berechtigung")
