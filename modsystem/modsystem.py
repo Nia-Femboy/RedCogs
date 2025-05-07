@@ -1088,7 +1088,7 @@ class Modsystem(commands.Cog):
             print("Fehler bei Kick: " + str(error))
             
     @app_commands.command(name="ban", description="Banne einen User")
-    @app_commands.describe(userstr="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban", messagedelete="Die Anzahl der Tage welche Rückwirkend die Nachrichten des Users gelöscht werden sollen")
+    @app_commands.describe(user="Der User welcher gebannt werden soll", reason="Die Begründung für den Ban", messagedelete="Die Anzahl der Tage welche Rückwirkend die Nachrichten des Users gelöscht werden sollen")
     #@app_commands.context_menu(name="Banne einen User")
     async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str, messagedelete: int = 1):
         try:
