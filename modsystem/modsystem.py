@@ -23,7 +23,6 @@ embedLog = discord.Embed(title="Modsystem", color=0xfc7f03)
 embedLogError = discord.Embed(color=0xfc7f03)
 
 enableEvent = True
-silentPing = discord.AllowedMentions.users=False
 
 class Modsystem(commands.Cog):
 
@@ -1529,6 +1528,7 @@ class Modsystem(commands.Cog):
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         try:
+            silentPing = discord.AllowedMentions.users=False
             if(await self.config.guild(member.guild).enableVoiceLog()):
                 if(before.channel is not None and before.channel is not after.channel):
                     await before.channel.send(f"**{member.mention}** hat den Channel verlassen", allowed_mentions=silentPing)
